@@ -24,12 +24,11 @@ x-security: &default-security
 services:
   nginx:
     build:
-      target: dev  # override if you have a prod nginx stage
+      target: prod
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./:${APP_PATH}:ro
       - ./docker/nginx/config/nginx.conf:/etc/nginx/nginx.conf:ro
     <<: *default-security
     cap_add:
@@ -133,4 +132,49 @@ services:
         limits:
           cpus: "1.0"
           memory: 384M
+          pids: 100
+
+  elasticsearch:
+    environment:
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    ports: []
+    <<: *default-security
+    read_only: false
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+          pids: 200
+
+  kibana:
+    environment:
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_SYSTEM_PASSWORD}
+    ports: []
+    <<: *default-security
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+          pids: 100
+
+  logstash:
+    ports: []
+    <<: *default-security
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
           pids: 100
