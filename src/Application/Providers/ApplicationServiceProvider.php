@@ -22,6 +22,9 @@ use Application\User\Services\Contracts\RegistrationServiceContract;
 use Application\User\Services\Contracts\UserServiceContract;
 use Application\User\Services\RegistrationService;
 use Application\User\Services\UserService;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class ApplicationServiceProvider extends ServiceProvider
@@ -48,6 +51,13 @@ class ApplicationServiceProvider extends ServiceProvider
         AnalysServiceContract::class => AnalysService::class,
         UserAnalysServiceContract::class => UserAnalysService::class,
     ];
+
+    public function boot(): void
+    {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+    }
 
     public function register(): void
     {

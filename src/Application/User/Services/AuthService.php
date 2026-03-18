@@ -47,7 +47,7 @@ class AuthService implements AuthServiceContract
      */
     public function refreshToken(bool $forceForever = false, bool $resetClaims = false): TokenResponse
     {
-        if (! $accessToken = $this->guard->refresh($forceForever, $resetClaims)) {
+        if (! $accessToken = $this->guard->refresh($forceForever, resetClaims: true)) {
             throw new ServerErrorException();
         }
 

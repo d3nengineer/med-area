@@ -143,4 +143,32 @@ class AuthControllerTest extends TestCase
         // Check asserts
         $response->assertUnauthorized();
     }
+
+    public function test_refresh_issues_new_token_with_different_claims(): void
+    {
+        // Get user
+        $user = $this->authUser();
+
+        // Login for get access token
+        $loginResponse = $this->post(route('api.auth.login'), [
+            'nickname' => $user->nickname,
+            'password' => $this->userPassword,
+        ]);
+        $loginResponse->assertOk();
+        $oldToken = $loginResponse->json('access_token');
+
+        // Refresh using old token
+        $refreshResponse = $this->withHeader('Authorization', "Bearer {$oldToken}")
+            ->post(route('api.auth.refresh'));
+        $refreshResponse->assertOk();
+        $newToken = $refreshResponse->json('access_token');
+
+        // A distinct token must be issued (resetClaims=true produces a new jti)
+        $this->assertNotEquals($oldToken, $newToken, 'Refresh must issue a new token, not reuse the old one');
+
+        // New token should be valid
+        $this->withHeader('Authorization', "Bearer {$newToken}")
+            ->post(route('api.auth.logout'))
+            ->assertNoContent();
+    }
 }
