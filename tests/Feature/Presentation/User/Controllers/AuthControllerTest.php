@@ -13,15 +13,17 @@ class AuthControllerTest extends TestCase
 {
     public function test_login_success(): void
     {
-        // Data for testing
-        $userData = UserDTO::from(new UserFactory()->definition());
-        $userData->password = $this->userPassword;
-
         // User for testing
-        User::create($userData->toArray());
+        $user = $this->getUser();
+
+        // Data for request
+        $data = [
+            'nickname' => $user->nickname, // correct nickname
+            'password' => $this->userPassword, // correct password
+        ];
 
         // Send API Request
-        $response = $this->post(route('api.auth.login'), $userData->only('nickname', 'password')->toArray());
+        $response = $this->post(route('api.auth.login'), $data);
 
         // Check asserts
         $response->assertOk();
@@ -34,11 +36,8 @@ class AuthControllerTest extends TestCase
 
     public function test_login_validation(): void
     {
-        // Data for testing
-        $userData = UserDTO::from(new UserFactory()->definition());
-
         // User for testing
-        User::create($userData->toArray());
+        $this->getUser();
 
         // Send API Request with empty data
         $response = $this->post(route('api.auth.login'), []);
@@ -51,17 +50,13 @@ class AuthControllerTest extends TestCase
 
     public function test_login_bad_nickname(): void
     {
-        // Data for testing
-        $userData = UserDTO::from(new UserFactory()->definition());
-        $userData->password = $this->userPassword;
-
         // User for testing
-        User::create($userData->toArray());
+        $this->getUser();
 
         // Data for request
         $data = [
-            'nickname' => fake()->userName(), // false value
-            'password' => $userData->password, // true value
+            'nickname' => '123', // bad nickname
+            'password' => $this->userPassword, // correct password
         ];
 
         // Send API Request
@@ -75,17 +70,13 @@ class AuthControllerTest extends TestCase
 
     public function test_login_bad_password(): void
     {
-        // Data for testing
-        $userData = UserDTO::from(new UserFactory()->definition());
-        $userData->password = $this->userPassword;
-
         // User for testing
-        User::create($userData->toArray());
+        $user = $this->getUser();
 
         // Data for request
         $data = [
-            'nickname' => $userData->nickname, // true value
-            'password' => fake()->password(), // false value
+            'nickname' => $user->nickname, // correct nickname
+            'password' => fake()->password(), // bad password
         ];
 
         // Send API Request
