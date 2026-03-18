@@ -28,7 +28,7 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
                 ),
                 new OA\Property(
                     property: 'files',
-                    description: 'List of files.',
+                    description: 'List of files. Allowed types: pdf, jpg, jpeg, png, webp. Max size: 15MB per file.',
                     type: 'array',
                     items: new OA\Items(
                         type: 'string',
@@ -85,7 +85,7 @@ class UploadFilesRequest extends BaseRequest
             'user_id' => ['required', 'string', new UserIdMatchesAuth()],
 
             'files' => ['required', 'array'],
-            'files.*' => ['required', 'file', 'max:15000'],
+            'files.*' => ['required', 'file', 'max:15000', 'mimes:pdf,jpg,jpeg,png,webp'],
         ];
     }
 }

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Presentation\User\Controllers\RegistrationController;
 
-Route::post('/register', [RegistrationController::class, 'register'])->name('api.users.register');
+Route::post('/register', [RegistrationController::class, 'register'])
+    ->middleware(['throttle:10,1'])
+    ->name('api.users.register');
 
 Route::get('/email/verify/{id}/{hash}', [RegistrationController::class, 'verify'])
     ->middleware(['auth', 'throttle:6,1'])

@@ -37,6 +37,7 @@ abstract class TestCase extends BaseTestCase
         $user = $this->getUser();
 
         auth()->login($user);
+        $this->actingAs($user);
 
         return $user;
     }
