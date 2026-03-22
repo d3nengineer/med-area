@@ -67,7 +67,7 @@ Shared → (any layer)
 | Domain | Entities |
 |--------|----------|
 | User | Authentication, registration, JWT |
-| Analys | Medical analysis records |
+| Analys | Medical analysis records, full-text search via Elasticsearch |
 | File | File uploads, S3 storage |
 | AI/Recognise | OCR recognition requests and results |
 
