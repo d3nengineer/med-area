@@ -6,18 +6,21 @@ namespace Tests\Feature\Infrastructure;
 
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Group;
+use Tests\Concerns\ResolvesElasticsearchHost;
 use Tests\TestCase;
 
 #[Group('elastic')]
 class ElasticsearchConnectionTest extends TestCase
 {
+    use ResolvesElasticsearchHost;
+
     private string $esBaseUrl;
 
     public function setUp(): void
     {
         parent::setUp();
 
-        $host = config('elastic.host', 'elasticsearch');
+        $host = $this->resolveReachableHost();
         $port = config('elastic.port', 9200);
 
         $this->esBaseUrl = "http://{$host}:{$port}";
@@ -62,23 +65,5 @@ class ElasticsearchConnectionTest extends TestCase
         $this->assertNotNull($response, "Index {$index} not found in Elasticsearch");
         $this->assertArrayHasKey('count', $response);
         $this->assertGreaterThan(0, $response['count'], "Index {$index} is empty");
-    }
-
-    private function makeHttpRequest(string $url): ?array
-    {
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 5,
-                'ignore_errors' => true,
-            ],
-        ]);
-
-        $body = @file_get_contents($url, false, $context);
-
-        if ($body === false) {
-            return null;
-        }
-
-        return json_decode($body, true);
     }
 }
