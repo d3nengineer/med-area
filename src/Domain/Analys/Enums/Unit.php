@@ -9,6 +9,7 @@ use Shared\Enums\LanguageCode;
 enum Unit: string
 {
     case GL = 'г/л'; // Грамм на Литр
+    case MMOL_L = 'mmol/L'; // Millimoles per Liter
     case PERCENT = '%'; // Проценты
 
     /**
@@ -23,6 +24,10 @@ enum Unit: string
             'г/л' => [
                 LanguageCode::RU->value => 'г/л',
                 LanguageCode::EN->value => 'g/l',
+            ],
+            'mmol/L' => [
+                LanguageCode::RU->value => 'ммоль/л',
+                LanguageCode::EN->value => 'mmol/L',
             ],
             '%' => [
                 LanguageCode::RU->value => '%',
