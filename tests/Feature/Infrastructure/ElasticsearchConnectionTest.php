@@ -26,6 +26,12 @@ class ElasticsearchConnectionTest extends TestCase
         $this->esBaseUrl = "http://{$host}:{$port}";
 
         logger()->debug('Testing ES connection', ['host' => $host, 'port' => $port]);
+
+        if ($this->makeHttpRequest($this->esBaseUrl) === null) {
+            $this->markTestSkipped(
+                "Live Elasticsearch is not reachable on {$host}:{$port}. Tried: {$this->describeElasticsearchConnectionAttempts()}."
+            );
+        }
     }
 
     public function test_elasticsearch_is_reachable(): void

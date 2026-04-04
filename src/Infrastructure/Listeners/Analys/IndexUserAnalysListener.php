@@ -6,8 +6,9 @@ namespace Infrastructure\Listeners\Analys;
 
 use Domain\Analys\Events\UserAnalysCreated;
 use Infrastructure\Services\Contracts\AnalysSearchIndexServiceContract;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class IndexUserAnalysListener
+class IndexUserAnalysListener implements ShouldQueue
 {
     public function __construct(
         private readonly AnalysSearchIndexServiceContract $indexService,

@@ -6,8 +6,9 @@ namespace Infrastructure\Listeners\Analys;
 
 use Domain\Analys\Events\UserAnalysDeleted;
 use Infrastructure\Services\Contracts\AnalysSearchIndexServiceContract;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class RemoveUserAnalysFromIndexListener
+class RemoveUserAnalysFromIndexListener implements ShouldQueue
 {
     public function __construct(
         private readonly AnalysSearchIndexServiceContract $indexService,

@@ -6,10 +6,14 @@ namespace Tests\Concerns;
 
 trait ResolvesElasticsearchHost
 {
+    /** @var list<string> */
+    protected array $elasticsearchConnectionAttempts = [];
+
     protected function resolveReachableHost(): string
     {
         $configuredHost = (string) config('elastic.host', 'elasticsearch');
         $port = (int) config('elastic.port', 9200);
+        $this->elasticsearchConnectionAttempts = [];
 
         $candidates = array_values(array_unique([
             $configuredHost,
@@ -19,7 +23,10 @@ trait ResolvesElasticsearchHost
         ]));
 
         foreach ($candidates as $host) {
-            if ($this->makeHttpRequest("http://{$host}:{$port}") !== null) {
+            $url = "http://{$host}:{$port}";
+            $this->elasticsearchConnectionAttempts[] = $url;
+
+            if ($this->makeHttpRequest($url) !== null) {
                 return $host;
             }
         }
@@ -27,6 +34,18 @@ trait ResolvesElasticsearchHost
         return $configuredHost;
     }
 
+    protected function describeElasticsearchConnectionAttempts(): string
+    {
+        if ($this->elasticsearchConnectionAttempts === []) {
+            return 'no endpoints attempted';
+        }
+
+        return implode(', ', $this->elasticsearchConnectionAttempts);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
     protected function makeHttpRequest(string $url): ?array
     {
         $context = stream_context_create([
@@ -42,6 +61,9 @@ trait ResolvesElasticsearchHost
             return null;
         }
 
-        return json_decode($body, true);
+        /** @var array<string, mixed>|null $decoded */
+        $decoded = json_decode($body, true);
+
+        return is_array($decoded) ? $decoded : null;
     }
 }
