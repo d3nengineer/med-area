@@ -6,6 +6,7 @@ namespace Presentation\Analys\Requests;
 
 use Application\Analys\DTO\Requests\CreateUserAnalysisRequestDTO;
 use Domain\Analys\Enums\Analys;
+use Domain\Analys\Enums\Unit;
 use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
 use Shared\Requests\BaseRequest;
@@ -66,7 +67,7 @@ class CreateUserAnalysisRequest extends BaseRequest
             'analysis.*.user_id' => ['required', 'string', new UserIdMatchesAuth(), new UserIdMatchesUrlUserId()],
             'analysis.*.analys_id' => ['required', 'int', Rule::enum(Analys::class)],
             'analysis.*.data' => ['required', 'numeric'],
-            'analysis.*.unit' => ['required', 'string'],
+            'analysis.*.unit' => ['required', 'string', Rule::enum(Unit::class)],
         ];
     }
 }
