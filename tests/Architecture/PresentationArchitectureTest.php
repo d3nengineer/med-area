@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Architecture;
 
-class PresentationArchitectureTest extends BaseArchitectureTest
+class PresentationArchitectureTest extends BaseArchitectureCase
 {
     public function test_presentation_depend_domain(): void
     {
@@ -23,6 +23,6 @@ class PresentationArchitectureTest extends BaseArchitectureTest
 
     public function test_presentation_depend_shared(): void
     {
-        $this->assertDependOn($this->domain, $this->shared);
+        $this->assertDependOn($this->presentation, $this->shared);
     }
 }
