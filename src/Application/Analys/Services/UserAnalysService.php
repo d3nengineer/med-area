@@ -9,6 +9,8 @@ use Application\Analys\DTO\Requests\CreateUserAnalysisRequestDTO;
 use Domain\Analys\DTO\UserAnalysDTO;
 use Application\Analys\Services\Contracts\UserAnalysServiceContract;
 use Domain\Analys\Enums\Analys;
+use Domain\Analys\Events\UserAnalysCreated;
+use Domain\Analys\Events\UserAnalysDeleted;
 use Domain\Analys\Models\UserAnalys;
 use Domain\Analys\Repositories\UserAnalysRepositoryContract;
 use Illuminate\Database\Eloquent\Collection;
@@ -49,9 +51,14 @@ class UserAnalysService implements UserAnalysServiceContract
                     $userAnalys->analys_name = $analysId->name;
                 }
 
-                $createdRecords[] = UserAnalysDTO::from(
+                $createdDTO = UserAnalysDTO::from(
                     $this->userAnalysRepository->create($userAnalys)
                 );
+
+                $createdRecords[] = $createdDTO;
+
+                logger()->debug('[UserAnalysService] firing UserAnalysCreated', ['id' => $createdDTO->id]);
+                event(new UserAnalysCreated($createdDTO));
             }
 
             DB::commit();
@@ -110,7 +117,15 @@ class UserAnalysService implements UserAnalysServiceContract
         logger()->info('[UserAnalysService.deleteUserAnalysis] deleting user analysis', ['filters' => $filters->toArray()]);
 
         try {
+            $records = $this->userAnalysRepository->getMany($filters);
+
             $this->userAnalysRepository->deleteMany($filters);
+
+            foreach ($records as $record) {
+                $dto = UserAnalysDTO::from($record);
+                logger()->debug('[UserAnalysService] firing UserAnalysDeleted', ['id' => $dto->id]);
+                event(new UserAnalysDeleted($dto));
+            }
         } catch (\Throwable $e) {
             logger()->error('[UserAnalysService.deleteUserAnalysis] failed to delete user analysis from DB', [
                 'error'   => $e->getMessage(),
