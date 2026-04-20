@@ -6,9 +6,9 @@ namespace Application\Analys\Services;
 
 use Domain\Analys\DTO\Filters\FilterUserAnalysDTO;
 use Application\Analys\DTO\Requests\CreateUserAnalysisRequestDTO;
+use Application\Analys\Mappers\UserAnalysMapper;
 use Domain\Analys\DTO\UserAnalysDTO;
 use Application\Analys\Services\Contracts\UserAnalysServiceContract;
-use Domain\Analys\Enums\Analys;
 use Domain\Analys\Events\UserAnalysCreated;
 use Domain\Analys\Events\UserAnalysDeleted;
 use Domain\Analys\Models\UserAnalys;
@@ -21,6 +21,7 @@ class UserAnalysService implements UserAnalysServiceContract
 {
     public function __construct(
         protected readonly UserAnalysRepositoryContract $userAnalysRepository,
+        protected readonly UserAnalysMapper $userAnalysMapper,
     ) {}
 
     /**
@@ -41,15 +42,7 @@ class UserAnalysService implements UserAnalysServiceContract
             $createdRecords = [];
 
             foreach ($dto->analysis as $userAnalys) {
-                if ($userAnalys->isNotEmptyValue('analys_id') && $userAnalys->emptyValue('analys_name')) {
-                    /** @var Analys $analysId */
-                    $analysId = $userAnalys->analys_id;
-                    logger()->debug('[UserAnalysService] computing analys_name from enum', [
-                        'analys_id'   => $analysId->value,
-                        'analys_name' => $analysId->name,
-                    ]);
-                    $userAnalys->analys_name = $analysId->name;
-                }
+                $userAnalys = $this->userAnalysMapper->assignAnalysNameFromEnum($userAnalys);
 
                 $createdDTO = UserAnalysDTO::from(
                     $this->userAnalysRepository->create($userAnalys)
