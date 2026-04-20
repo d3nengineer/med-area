@@ -9,6 +9,7 @@ use Domain\AI\Recognise\Enums\RecogniseStatus;
 use Domain\AI\Recognise\Enums\YC\OCRModel;
 use Domain\AI\Recognise\Models\RecogniseRequest;
 use Domain\File\Models\File;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Shared\Enums\LanguageCode;
@@ -21,6 +22,18 @@ class RecogniserControllerTest extends TestCase
     {
         // Fake queue to prevent job execution
         Queue::fake();
+        $timestamp = now()->format('Y-m-d\TH:i:sP');
+        Http::fake([
+            '*' => Http::response([
+                'id' => 'test-operation-id',
+                'description' => 'Recognition started',
+                'createdAt' => $timestamp,
+                'createdBy' => 'test-user',
+                'modifiedAt' => $timestamp,
+                'done' => false,
+                'metadata' => null,
+            ], 200),
+        ]);
 
         // Auth user for testing
         $user = $this->authUser();
