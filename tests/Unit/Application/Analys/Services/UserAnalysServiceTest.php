@@ -11,7 +11,6 @@ use Application\Analys\Services\UserAnalysService;
 use Domain\Analys\Enums\Analys;
 use Domain\Analys\Factories\UserAnalysFactory;
 use Domain\Analys\Models\UserAnalys;
-use Domain\Analys\Repositories\UserAnalysRepositoryContract;
 use Shared\Exceptions\ServerErrorException;
 use Tests\TestCase;
 
@@ -28,9 +27,7 @@ class UserAnalysServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new UserAnalysService(
-            app(UserAnalysRepositoryContract::class),
-        );
+        $this->service = app(UserAnalysService::class);
     }
 
     public function test_create_user_analysis_success(): void
