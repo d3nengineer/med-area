@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Architecture;
 
-class ApplicationArchitectureTest extends BaseArchitectureTest
+class ApplicationArchitectureTest extends BaseArchitectureCase
 {
     public function test_application_does_not_depend_infrastructure(): void
     {

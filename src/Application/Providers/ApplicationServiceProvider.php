@@ -11,13 +11,14 @@ use Application\AI\Recogniser\Services\RecogniseResponseParser;
 use Application\AI\Recogniser\Services\YVisionOCRService;
 use Application\Analys\Services\AnalysService;
 use Application\Analys\Services\Contracts\AnalysServiceContract;
+use Application\Analys\Services\Contracts\UserAnalysSearchServiceContract;
 use Application\Analys\Services\Contracts\UserAnalysServiceContract;
+use Application\Analys\Services\UserAnalysSearchService;
 use Application\Analys\Services\UserAnalysService;
 use Application\S3\Services\Contracts\S3ServiceContract;
 use Application\S3\Services\YCloudS3Service;
 use Application\User\Services\AuthService;
 use Application\User\Services\Contracts\AuthServiceContract;
-use Tymon\JWTAuth\JWTGuard;
 use Application\User\Services\Contracts\RegistrationServiceContract;
 use Application\User\Services\Contracts\UserServiceContract;
 use Application\User\Services\RegistrationService;
@@ -26,6 +27,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Tymon\JWTAuth\JWTGuard;
 
 class ApplicationServiceProvider extends ServiceProvider
 {
@@ -50,6 +52,7 @@ class ApplicationServiceProvider extends ServiceProvider
         // Analys
         AnalysServiceContract::class => AnalysService::class,
         UserAnalysServiceContract::class => UserAnalysService::class,
+        UserAnalysSearchServiceContract::class => UserAnalysSearchService::class,
     ];
 
     public function boot(): void

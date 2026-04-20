@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Architecture;
 
-class DomainArchitectureTest extends BaseArchitectureTest
+class DomainArchitectureTest extends BaseArchitectureCase
 {
     public function test_domain_not_depend_application(): void
     {

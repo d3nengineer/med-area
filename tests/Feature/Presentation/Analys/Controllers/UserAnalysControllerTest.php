@@ -45,6 +45,33 @@ class UserAnalysControllerTest extends TestCase
         }
     }
 
+    public function test_user_analysis_create_success_with_collection_payload(): void
+    {
+        // Auth user for testing
+        $user = $this->authUser();
+
+        // Send API Request using the Postman collection payload shape
+        $response = $this->post(route('api.users.analysis.create', ['userId' => $user->id]), [
+            'user_id' => $user->id,
+            'analysis' => [[
+                'user_id' => $user->id,
+                'analys_id' => Analys::D3->value,
+                'data' => 4.8,
+                'unit' => 'mmol/L',
+            ]],
+        ]);
+
+        // Check asserts
+        $response->assertCreated();
+        $response->assertJsonCount(1, 'data');
+        $this->assertDatabaseHas(UserAnalys::class, [
+            'user_id' => $user->id,
+            'analys_id' => Analys::D3->value,
+            'data' => 4.8,
+            'unit' => 'mmol/L',
+        ]);
+    }
+
     public function test_user_analysis_create_validation_unauth(): void
     {
         // Auth user for testing
@@ -111,6 +138,27 @@ class UserAnalysControllerTest extends TestCase
         foreach ($dto->analysis as $analys) {
             $this->assertDatabaseMissing(UserAnalys::class, $analys->toArray());
         }
+    }
+
+    public function test_user_analysis_create_validation_invalid_unit(): void
+    {
+        // Auth user for testing
+        $user = $this->authUser();
+
+        // Send API Request with unsupported unit from API client payload
+        $response = $this->post(route('api.users.analysis.create', ['userId' => $user->id]), [
+            'user_id' => $user->id,
+            'analysis' => [[
+                'user_id' => $user->id,
+                'analys_id' => \Domain\Analys\Enums\Analys::D3->value,
+                'data' => 4.8,
+                'unit' => 'mg/dL',
+            ]],
+        ]);
+
+        // Check asserts
+        $response->assertUnprocessable();
+        $response->assertInvalid(['analysis.0.unit']);
     }
 
     public function test_user_analysis_create_validation_unreal_user_id(): void

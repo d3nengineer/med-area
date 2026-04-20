@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Architecture;
 
-class InfrastructureArchitectureTest extends BaseArchitectureTest
+class InfrastructureArchitectureTest extends BaseArchitectureCase
 {
     public function test_infrastructure_depends_on_domain(): void
     {

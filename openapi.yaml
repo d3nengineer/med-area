@@ -163,6 +163,35 @@ paths:
           description: Forbidden.
         '422':
           description: 'Validation error.'
+  '/api/users/{userId}/analysis/search':
+    get:
+      tags:
+        - analys
+        - api
+      description: 'Full-text search user analyses.'
+      operationId: apiUsersAnalysisSearch
+      parameters:
+        -
+          name: userId
+          in: path
+          description: 'user id'
+          required: true
+          schema:
+            type: string
+        -
+          name: q
+          in: query
+          description: 'search query (min 2 chars)'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Search results.'
+        '401':
+          description: Unauthorized.
+        '422':
+          description: 'Validation error.'
   /api/files:
     get:
       tags:
@@ -645,7 +674,7 @@ components:
                 type: integer
                 format: int64
               files:
-                description: 'List of files.'
+                description: 'List of files. Allowed types: pdf, jpg, jpeg, png, webp. Max size: 15MB per file.'
                 type: array
                 items:
                   type: string

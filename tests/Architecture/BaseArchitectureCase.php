@@ -8,7 +8,7 @@ use PHPUnit\Architecture\ArchitectureAsserts;
 use PHPUnit\Architecture\Elements\Layer\Layer;
 use Tests\TestCase;
 
-abstract class BaseArchitectureTest extends TestCase
+abstract class BaseArchitectureCase extends TestCase
 {
     use ArchitectureAsserts;
 
@@ -20,6 +20,8 @@ abstract class BaseArchitectureTest extends TestCase
 
     public function setUp(): void
     {
+        parent::setUp();
+
         $this->application = $this->layer()->leaveByNameStart('Application\\');
         $this->domain = $this->layer()->leaveByNameStart('Domain\\');
         $this->infrastructure = $this->layer()->leaveByNameStart('Infrastructure\\');

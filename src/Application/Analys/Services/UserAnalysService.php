@@ -6,9 +6,11 @@ namespace Application\Analys\Services;
 
 use Domain\Analys\DTO\Filters\FilterUserAnalysDTO;
 use Application\Analys\DTO\Requests\CreateUserAnalysisRequestDTO;
+use Application\Analys\Mappers\UserAnalysMapper;
 use Domain\Analys\DTO\UserAnalysDTO;
 use Application\Analys\Services\Contracts\UserAnalysServiceContract;
-use Domain\Analys\Enums\Analys;
+use Domain\Analys\Events\UserAnalysCreated;
+use Domain\Analys\Events\UserAnalysDeleted;
 use Domain\Analys\Models\UserAnalys;
 use Domain\Analys\Repositories\UserAnalysRepositoryContract;
 use Illuminate\Database\Eloquent\Collection;
@@ -19,6 +21,7 @@ class UserAnalysService implements UserAnalysServiceContract
 {
     public function __construct(
         protected readonly UserAnalysRepositoryContract $userAnalysRepository,
+        protected readonly UserAnalysMapper $userAnalysMapper,
     ) {}
 
     /**
@@ -39,19 +42,16 @@ class UserAnalysService implements UserAnalysServiceContract
             $createdRecords = [];
 
             foreach ($dto->analysis as $userAnalys) {
-                if ($userAnalys->isNotEmptyValue('analys_id') && $userAnalys->emptyValue('analys_name')) {
-                    /** @var Analys $analysId */
-                    $analysId = $userAnalys->analys_id;
-                    logger()->debug('[UserAnalysService] computing analys_name from enum', [
-                        'analys_id'   => $analysId->value,
-                        'analys_name' => $analysId->name,
-                    ]);
-                    $userAnalys->analys_name = $analysId->name;
-                }
+                $userAnalys = $this->userAnalysMapper->assignAnalysNameFromEnum($userAnalys);
 
-                $createdRecords[] = UserAnalysDTO::from(
+                $createdDTO = UserAnalysDTO::from(
                     $this->userAnalysRepository->create($userAnalys)
                 );
+
+                $createdRecords[] = $createdDTO;
+
+                logger()->debug('[UserAnalysService] firing UserAnalysCreated', ['id' => $createdDTO->id]);
+                event(new UserAnalysCreated($createdDTO));
             }
 
             DB::commit();
@@ -110,7 +110,15 @@ class UserAnalysService implements UserAnalysServiceContract
         logger()->info('[UserAnalysService.deleteUserAnalysis] deleting user analysis', ['filters' => $filters->toArray()]);
 
         try {
+            $records = $this->userAnalysRepository->getMany($filters);
+
             $this->userAnalysRepository->deleteMany($filters);
+
+            foreach ($records as $record) {
+                $dto = UserAnalysDTO::from($record);
+                logger()->debug('[UserAnalysService] firing UserAnalysDeleted', ['id' => $dto->id]);
+                event(new UserAnalysDeleted($dto));
+            }
         } catch (\Throwable $e) {
             logger()->error('[UserAnalysService.deleteUserAnalysis] failed to delete user analysis from DB', [
                 'error'   => $e->getMessage(),

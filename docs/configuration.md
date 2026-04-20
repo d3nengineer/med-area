@@ -88,13 +88,16 @@ Copy `.env.example` to `.env` and fill in the values below.
 | `RECOGNISER_YC_URL` | Vision OCR endpoint URL |
 | `RECOGNISER_YC_VERSION` | API version (default `v1`) |
 
-### Elasticsearch (ELK)
+### Elasticsearch
+
+Used for both full-text search over user analyses and the ELK log pipeline.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ELASTICSEARCH_HOST` | Elasticsearch hostname | `elasticsearch` |
 | `ELASTICSEARCH_PORT` | Elasticsearch port | `9200` |
-| `ELASTICSEARCH_INDEX_PREFIX` | Prefix for index names | `medarea` |
+| `ELASTICSEARCH_INDEX_PREFIX` | Prefix for index names (e.g. `medarea_user_analys`) | `medarea` |
+| `ELASTIC_PASSWORD` | Password for the `elastic` superuser (leave empty for unauthenticated dev) | *(empty)* |
 
 ### Commands
 
@@ -127,6 +130,7 @@ Copy `.env.example` to `.env` and fill in the values below.
 | `tymon/jwt-auth` ^2.2 | JWT authentication |
 | `league/flysystem-aws-s3-v3` ^3.0 | S3 filesystem driver |
 | `predis/predis` ^3.2 | Redis client |
+| `elasticsearch/elasticsearch` ^9.3 | Elasticsearch PHP client (full-text search) |
 
 ### Development
 
