@@ -76,8 +76,11 @@ Copy `.env.example` to `.env` and fill in the values below.
 | `AWS_BUCKET` | S3 bucket name (production) |
 | `AWS_BUCKET_TESTING` | S3 bucket name (tests) |
 | `AWS_ENDPOINT` | Yandex Cloud S3 endpoint URL |
-| `AWS_URL` | Public URL for accessing stored files |
+| `AWS_URL` | Optional S3 base URL used by the adapter; not exposed directly by the API |
 | `AWS_USE_PATH_STYLE_ENDPOINT` | Use path-style S3 URLs (`false` for Yandex) |
+
+Buckets should remain private. The file API returns short-lived signed download URLs instead of
+stable object paths.
 
 ### Yandex Cloud OCR (Recogniser)
 
@@ -104,6 +107,7 @@ Used for both full-text search over user analyses and the ELK log pipeline.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `FILES_FORCE_DELETE_SUB_DAYS` | Delete files older than N days in the force-delete command | `3` |
+| `FILES_SIGNED_URL_TTL_MINUTES` | Lifetime of signed file download URLs returned by the file API | `5` |
 
 ### Xdebug (local dev only)
 

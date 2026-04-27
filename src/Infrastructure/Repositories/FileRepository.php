@@ -102,6 +102,11 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
 
         $query = parent::baseFilters($query, $filters);
 
+        // Attribute: id
+        if ($filters->isNotEmptyValue('ids') && ! empty($filters->ids)) {
+            $query->whereIn('id', $filters->ids);
+        }
+
         // Attribute: deleted_at
         $filters->min_deleted_at = $filters->emptyValue('min_deleted_at') ? null : $filters->min_deleted_at;
         $filters->max_deleted_at = $filters->emptyValue('max_deleted_at') ? null : $filters->max_deleted_at;
@@ -114,8 +119,8 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
         $query = $this->filterDateRange($query, 'deleted_at', $minDeletedAt, $maxDeletedAt);
 
         // Attribute: user_id
-        if ($filters->isNotEmptyValue('user_ids')) {
-            $query->whereUserId($filters->user_ids);
+        if ($filters->isNotEmptyValue('user_ids') && ! empty($filters->user_ids)) {
+            $query->whereIn('user_id', $filters->user_ids);
         }
 
         // Attribute: size

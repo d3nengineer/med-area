@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Presentation\File\Requests;
 
 use Domain\File\DTO\Filters\FilterFileDTO;
-use OpenApi\Attributes as OA;
 use Shared\Requests\BaseRequest;
-use Shared\Rules\UserIdMatchesAuth;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class DeleteFilesRequest extends BaseRequest
 {
@@ -17,16 +15,21 @@ class DeleteFilesRequest extends BaseRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return auth()->check();
     }
 
     public function getDTO(): FilterFileDTO
     {
-        if (! $validated = $this->validated()) {
-            throw new UnprocessableEntityHttpException();
+        $validated = $this->validated();
+
+        if (! is_string($this->user()?->id)) {
+            throw new AccessDeniedHttpException();
         }
 
-        return FilterFileDTO::from($validated);
+        return FilterFileDTO::from([
+            ...$validated,
+            'user_ids' => [$this->user()->id],
+        ]);
     }
 
     /**
@@ -37,10 +40,6 @@ class DeleteFilesRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            // user_id
-            'user_ids' => ['array'],
-            'user_ids.*' => ['string', new UserIdMatchesAuth()],
-
             // id
             'ids' => ['array'],
             'ids.*' => ['string'],

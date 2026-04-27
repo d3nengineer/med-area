@@ -21,7 +21,7 @@ API available at `http://localhost:80` (or configured `APP_WEB_PORT`).
 - **Medical Analysis Management** — CRUD for patient analysis records
 - **OCR Recognition** — file upload + Yandex Cloud Vision text extraction
 - **Async Processing** — AI jobs dispatched to Redis-backed Laravel Queue
-- **S3 Storage** — files stored in Yandex Cloud S3-compatible storage
+- **Private S3 Storage** — files stored in Yandex Cloud S3-compatible storage and exposed via short-lived signed URLs
 - **Strict DDD Architecture** — Domain / Application / Infrastructure / Presentation layers
 - **Full-text Search** — Elasticsearch-backed search over user analysis records via `GET /api/users/{userId}/analysis/search`
 - **Centralized Logging (ELK)** — structured JSON logs shipped via Filebeat to Elasticsearch and visualized in Kibana
