@@ -38,8 +38,6 @@ class UpdateYVisionRecogniseRequestJobTest extends TestCase
         $this->app->instance(RecogniseRequestRepositoryContract::class, $this->repositoryMock);
         $this->app->instance(RecogniserServiceContract::class, $this->recogniserServiceMock);
         $this->app->instance(RecogniseResponseParser::class, $this->parser);
-
-        Log::shouldReceive('debug')->andReturnNull();
     }
 
     public function tearDown(): void

@@ -28,8 +28,6 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
      */
     public function getMany(FilterFileDTO $filters): Collection
     {
-        logger()->debug('[FileRepository.getMany] starting query', ['filters' => $filters->toArray()]);
-
         $query = $filters->emptyValue('min_deleted_at') && $filters->emptyValue('max_deleted_at')
             ? $this->model::query()
             : $this->model::withTrashed();
@@ -37,8 +35,6 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
         $query = $this->baseFilters($query, $filters);
 
         $result = $query->get();
-
-        logger()->debug('[FileRepository.getMany] returning records', ['count' => $result->count()]);
 
         return $result;
     }
@@ -98,8 +94,6 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
      */
     public function baseFilters(Builder $query, FilterBaseDTO $filters): Builder
     {
-        logger()->debug('[FileRepository.baseFilters] applying filters', $filters->toArray());
-
         $query = parent::baseFilters($query, $filters);
 
         // Attribute: id
@@ -137,8 +131,6 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
                 ->where('size', '>', $filters->min_size)
                 ->where('size', '<', $filters->max_size);
         }
-
-        logger()->debug('[FileRepository.baseFilters] filters applied', ['query' => $query->toRawSql()]);
 
         return $query;
     }

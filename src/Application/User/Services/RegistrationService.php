@@ -28,8 +28,6 @@ class RegistrationService implements RegistrationServiceContract
      */
     public function register(UserDTO $userDTO): UserDTO
     {
-        logger()->debug('[RegistrationService.register] starting', ['email' => $userDTO->email]);
-
         // Create new User model
         $userDTO = UserDTO::from($this->userRepository->create($userDTO));
 
@@ -46,8 +44,6 @@ class RegistrationService implements RegistrationServiceContract
             throw $e;
         }
 
-        logger()->debug('[RegistrationService.register] completed', ['user_id' => $userDTO->id]);
-
         return $userDTO;
     }
 
@@ -59,8 +55,6 @@ class RegistrationService implements RegistrationServiceContract
      */
     public function sendEmailVerificationNotification(User $user): void
     {
-        logger()->debug('[RegistrationService.sendEmailVerificationNotification] starting', ['user_id' => $user->id]);
-
         if (! $user->hasVerifiedEmail()) {
             event(new UserRegistered($user));
         }

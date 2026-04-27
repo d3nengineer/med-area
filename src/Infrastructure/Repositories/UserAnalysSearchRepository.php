@@ -24,12 +24,6 @@ class UserAnalysSearchRepository implements UserAnalysSearchRepositoryContract
 
     public function search(SearchUserAnalysDTO $dto): Collection
     {
-        logger()->debug('[UserAnalysSearchRepository.search] searching index', [
-            'index'  => $this->indexName,
-            'query'  => $dto->query,
-            'userId' => $dto->userId,
-        ]);
-
         try {
             $response = $this->elasticsearchClientService->getClient()->search([
                 'index' => $this->indexName,
@@ -56,8 +50,6 @@ class UserAnalysSearchRepository implements UserAnalysSearchRepositoryContract
 
             /** @var array<int, array<string, mixed>> $hits */
             $hits = $this->resolveResponse($response)->asArray()['hits']['hits'] ?? [];
-
-            logger()->debug('[UserAnalysSearchRepository.search] got hits', ['count' => count($hits)]);
 
             return collect($hits)
                 ->map(function (array $hit): UserAnalysDTO {

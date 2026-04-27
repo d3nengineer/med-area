@@ -34,11 +34,6 @@ class UserAnalysSearchController extends BaseController
     {
         $dto = $request->getDTO();
 
-        logger()->debug('[UserAnalysSearchController] search request', [
-            'userId' => $dto->userId,
-            'q'      => $dto->query,
-        ]);
-
         $results = $this->searchService->search($dto);
 
         return Response::json($results->values());

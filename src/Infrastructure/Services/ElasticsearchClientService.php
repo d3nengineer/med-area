@@ -17,17 +17,11 @@ class ElasticsearchClientService implements ElasticsearchClientServiceContract
         $host = config('elastic.host');
         $port = config('elastic.port');
 
-        logger()->debug('[ElasticsearchClientService] connecting to Elasticsearch', [
-            'host' => $host,
-            'port' => $port,
-        ]);
-
         try {
             $builder = ClientBuilder::create()->setHosts(["{$host}:{$port}"]);
 
             $password = config('elastic.password');
             if ($password !== null && $password !== '') {
-                logger()->debug('[ElasticsearchClientService] using basic authentication');
                 $builder->setBasicAuthentication('elastic', $password);
             }
 

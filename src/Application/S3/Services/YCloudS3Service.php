@@ -43,8 +43,6 @@ class YCloudS3Service implements S3ServiceContract
 
     public function upload(FileDTO $file): File
     {
-        logger()->debug('[YCloudS3Service.upload] starting', ['file_key' => $file->key]);
-
         try {
             if ($file->emptyValue('content')) {
                 throw new ServerErrorException('File content not found.');
@@ -73,8 +71,6 @@ class YCloudS3Service implements S3ServiceContract
 
     public function createFile(FileDTO $file): File
     {
-        logger()->debug('[YCloudS3Service.createFile] starting', ['file_key' => $file->key]);
-
         try {
             return $this->fileRepository->create($file);
         } catch (\Throwable $e) {
@@ -95,8 +91,6 @@ class YCloudS3Service implements S3ServiceContract
      */
     public function getFiles(FilterFileDTO $filters): Collection
     {
-        logger()->debug('[YCloudS3Service.getFiles] starting', ['filters' => $filters->toArray()]);
-
         try {
             $result = $this->fileRepository->getMany($filters);
         } catch (\Throwable $e) {
@@ -106,8 +100,6 @@ class YCloudS3Service implements S3ServiceContract
             ]);
             throw new ServerErrorException();
         }
-
-        logger()->debug('[YCloudS3Service.getFiles] returning records', ['count' => $result->count()]);
 
         return $result;
     }
@@ -123,11 +115,6 @@ class YCloudS3Service implements S3ServiceContract
      */
     public function getFileFromStorage(string $key, ?EnumsStorage $diskName = null): string
     {
-        logger()->debug('[YCloudS3Service.getFileFromStorage] retrieving file from storage', [
-            'key' => $key,
-            'disk' => $diskName !== null ? $diskName->value : $this->diskName->value,
-        ]);
-
         $storage = $diskName !== null ? $this->resolveDisk($diskName) : $this->disk;
 
         if (! $content = $storage->get($key)) {

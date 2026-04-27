@@ -11,11 +11,6 @@ class DispatchDeleteFileJobListener
 {
     public function handle(FileMarkedForDeletion $event): void
     {
-        logger()->debug('[DispatchDeleteFileJobListener.handle] dispatching DeleteFileJob', [
-            'key' => $event->key,
-            'disk' => $event->diskName->value,
-        ]);
-
         DeleteFileJob::dispatch($event->key, $event->diskName);
     }
 }

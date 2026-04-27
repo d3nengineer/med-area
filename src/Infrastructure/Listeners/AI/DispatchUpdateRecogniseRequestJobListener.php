@@ -11,10 +11,6 @@ class DispatchUpdateRecogniseRequestJobListener
 {
     public function handle(RecogniseRequestCompleted $event): void
     {
-        logger()->debug('[DispatchUpdateRecogniseRequestJobListener.handle] dispatching UpdateYVisionRecogniseRequestJob', [
-            'operation_id' => $event->recogniseRequestDTO->operation_id,
-        ]);
-
         UpdateYVisionRecogniseRequestJob::dispatch($event->recogniseRequestDTO)
             ->delay(now()->plus(seconds: 40));
     }

@@ -25,8 +25,6 @@ class AnalysService implements AnalysServiceContract
      */
     public function getAnalysis(): Collection
     {
-        logger()->debug('[AnalysService.getAnalysis] starting');
-
         try {
             $result = $this->analysRepository->getMany();
         } catch (\Throwable $e) {
@@ -36,8 +34,6 @@ class AnalysService implements AnalysServiceContract
 
             throw new ServerErrorException();
         }
-
-        logger()->debug('[AnalysService.getAnalysis] returning records', ['count' => $result->count()]);
 
         return $result;
     }
