@@ -37,8 +37,6 @@ class DeleteFileJob implements ShouldQueue
 
     public function handle(): void
     {
-        logger()->debug('[DeleteFileJob.handle] attempting to delete file', ['path' => $this->path]);
-
         try {
             $disk = $this->getDisk();
 

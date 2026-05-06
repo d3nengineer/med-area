@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Application\S3\Services\Contracts;
 
+use Application\S3\DTO\Responses\SignedFileResponseDTO;
+use DateTimeInterface;
 use Domain\File\DTO\FileDTO;
 use Domain\File\DTO\Filters\FilterFileDTO;
 use Domain\File\Models\File;
@@ -35,6 +37,10 @@ interface S3ServiceContract
      * @throws NotFoundHttpException
      */
     public function getFileFromStorage(string $key, ?EnumsStorage $diskName = null): string;
+
+    public function temporaryUrl(string $key, DateTimeInterface $expiresAt, ?EnumsStorage $diskName = null): string;
+
+    public function toSignedResponse(File $file): SignedFileResponseDTO;
 
     public function delete(FilterFileDTO $filters): void;
 

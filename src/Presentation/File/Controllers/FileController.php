@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Presentation\File\Controllers;
 
+use Application\S3\DTO\Responses\SignedFileResponseDTO;
 use Application\S3\Services\Contracts\S3ServiceContract;
+use Domain\File\Models\File;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Response;
 use Presentation\BaseController;
@@ -49,34 +51,24 @@ class FileController extends BaseController
     {
         $dto = $request->getDTO();
 
-        $models = [];
+        $responses = [];
 
         if (is_array($dto->files)) {
             foreach ($dto->files as $file) {
                 $file->storage = EnumsStorage::S3;
-                $models[] = $this->s3Service->upload($file);
+                $responses[] = $this->s3Service->toSignedResponse($this->s3Service->upload($file));
             }
         }
 
-        return Response::json(FileResourceCollection::make($models), 201);
+        return Response::json(FileResourceCollection::make($responses), 201);
     }
 
     #[OA\Get(
         path: '/api/files',
         operationId: 'apiFilesIndex',
-        description: 'Get files by filters.',
+        description: 'Get authenticated user files by filters.',
         tags: ['file', 'api'],
         parameters: [
-            new OA\Parameter(
-                name: 'user_ids[]',
-                in: 'query',
-                description: 'Array of user IDs',
-                required: true,
-                schema: new OA\Schema(
-                    type: 'array',
-                    items: new OA\Items(type: 'string'),
-                ),
-            ),
             new OA\Parameter(
                 name: 'ids[]',
                 in: 'query',
@@ -111,25 +103,15 @@ class FileController extends BaseController
 
         $files = $this->s3Service->getFiles($filters);
 
-        return Response::json(new FileResourceCollection($files), 200);
+        return Response::json(new FileResourceCollection($this->mapSignedResponses($files)), 200);
     }
 
     #[OA\Delete(
         path: '/api/files',
         operationId: 'apiFilesDestroy',
-        description: 'Delete files by filters.',
+        description: 'Delete authenticated user files by filters.',
         tags: ['file', 'api'],
         parameters: [
-            new OA\Parameter(
-                name: 'user_ids[]',
-                in: 'query',
-                description: 'Array of user IDs',
-                required: true,
-                schema: new OA\Schema(
-                    type: 'array',
-                    items: new OA\Items(type: 'string'),
-                ),
-            ),
             new OA\Parameter(
                 name: 'ids[]',
                 in: 'query',
@@ -164,5 +146,20 @@ class FileController extends BaseController
         $this->s3Service->delete($filters);
 
         return Response::json(null, 204);
+    }
+
+    /**
+     * @param iterable<array-key, File> $files
+     * @return array<int, SignedFileResponseDTO>
+     */
+    private function mapSignedResponses(iterable $files): array
+    {
+        $responses = [];
+
+        foreach ($files as $file) {
+            $responses[] = $this->s3Service->toSignedResponse($file);
+        }
+
+        return $responses;
     }
 }

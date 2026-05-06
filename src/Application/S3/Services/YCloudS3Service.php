@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace Application\S3\Services;
 
+use Application\S3\DTO\Responses\SignedFileResponseDTO;
+use Application\S3\Services\Contracts\S3ServiceContract;
 use Domain\File\DTO\FileDTO;
 use Domain\File\DTO\Filters\FilterFileDTO;
-use Application\S3\Services\Contracts\S3ServiceContract;
-use Domain\File\Models\File;
-use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Storage;
 use Domain\File\Events\FileMarkedForDeletion;
+use Domain\File\Models\File;
 use Domain\File\Repositories\FileRepositoryContract;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Shared\Enums\Storage as EnumsStorage;
 use Shared\Exceptions\ServerErrorException;
-use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -23,7 +25,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class YCloudS3Service implements S3ServiceContract
 {
-    public private(set) Filesystem $disk;
+    protected ?FilesystemAdapter $disk;
 
     protected readonly FileRepositoryContract $fileRepository;
 
@@ -31,18 +33,16 @@ class YCloudS3Service implements S3ServiceContract
 
     public function __construct(
         FileRepositoryContract $fileRepository,
-        ?Filesystem $disk = null,
+        ?FilesystemAdapter $disk = null,
         ?EnumsStorage $diskName = null,
     ) {
         $this->fileRepository = $fileRepository;
-        $this->disk = $disk ?? Storage::disk(EnumsStorage::S3); // use s3 disk for ycloud service (see: filesystems.php -> disks -> s3)
         $this->diskName = $diskName ?? EnumsStorage::S3;
+        $this->disk = $disk;
     }
 
     public function upload(FileDTO $file): File
     {
-        logger()->debug('[YCloudS3Service.upload] starting', ['file_key' => $file->key]);
-
         try {
             if ($file->emptyValue('content')) {
                 throw new ServerErrorException('File content not found.');
@@ -51,14 +51,15 @@ class YCloudS3Service implements S3ServiceContract
             assert($file->content instanceof UploadedFile);
 
             $path = $this->getFilePath($file);
+            $disk = $this->resolveConfiguredDisk();
 
-            $result = $this->disk->putFile($path, $file->content);
+            $result = $disk->putFile($path, $file->content);
             if (! $result) {
                 throw new ServerErrorException('Cant upload file to ycloud s3. Path: ' . $path);
             }
         } catch (\Exception $e) {
             logger()->critical('[YCloudS3Service.upload] upload to S3 failed', [
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'context' => ['file_key' => $file->key],
             ]);
             throw new ServerErrorException();
@@ -71,13 +72,11 @@ class YCloudS3Service implements S3ServiceContract
 
     public function createFile(FileDTO $file): File
     {
-        logger()->debug('[YCloudS3Service.createFile] starting', ['file_key' => $file->key]);
-
         try {
             return $this->fileRepository->create($file);
         } catch (\Throwable $e) {
             logger()->critical('[YCloudS3Service.createFile] failed to save file to DB', [
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'context' => ['file_key' => $file->key],
             ]);
 
@@ -93,19 +92,15 @@ class YCloudS3Service implements S3ServiceContract
      */
     public function getFiles(FilterFileDTO $filters): Collection
     {
-        logger()->debug('[YCloudS3Service.getFiles] starting', ['filters' => $filters->toArray()]);
-
         try {
             $result = $this->fileRepository->getMany($filters);
         } catch (\Throwable $e) {
             logger()->error('[YCloudS3Service.getFiles] failed to get files', [
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'context' => $filters->toArray(),
             ]);
             throw new ServerErrorException();
         }
-
-        logger()->debug('[YCloudS3Service.getFiles] returning records', ['count' => $result->count()]);
 
         return $result;
     }
@@ -121,18 +116,50 @@ class YCloudS3Service implements S3ServiceContract
      */
     public function getFileFromStorage(string $key, ?EnumsStorage $diskName = null): string
     {
-        logger()->debug('[YCloudS3Service.getFileFromStorage] retrieving file from storage', [
-            'key' => $key,
-            'disk' => $diskName !== null ? $diskName->value : $this->diskName->value,
-        ]);
-
-        $storage = $diskName !== null ? Storage::disk($diskName) : $this->disk;
+        $storage = $this->resolveConfiguredDisk($diskName);
 
         if (! $content = $storage->get($key)) {
             throw new NotFoundHttpException();
         }
 
         return $content;
+    }
+
+    public function temporaryUrl(string $key, \DateTimeInterface $expiresAt, ?EnumsStorage $diskName = null): string
+    {
+        $resolvedDiskName = $diskName ?? $this->diskName;
+        $disk = $this->resolveConfiguredDisk($diskName);
+
+        try {
+            if (! $disk->providesTemporaryUrls()) {
+                throw new RuntimeException('Temporary URLs are not supported for disk: ' . $resolvedDiskName->value);
+            }
+
+            return $disk->temporaryUrl($key, $expiresAt);
+        } catch (\Throwable $e) {
+            logger()->error('[YCloudS3Service.temporaryUrl] failed to generate temporary url', [
+                'error' => $e->getMessage(),
+                'context' => [
+                    'key' => $key,
+                    'disk' => $resolvedDiskName->value,
+                    'expires_at' => $expiresAt->format(\DateTimeInterface::ATOM),
+                ],
+            ]);
+
+            throw new ServerErrorException();
+        }
+    }
+
+    public function toSignedResponse(File $file): SignedFileResponseDTO
+    {
+        $expiresAt = now()->addMinutes($this->getSignedUrlTtlMinutes());
+
+        return SignedFileResponseDTO::from([
+            'id' => $file->id,
+            'user_id' => $file->user_id,
+            'download_url' => $this->temporaryUrl($file->key, $expiresAt, $file->storage),
+            'download_expires_at' => $expiresAt,
+        ]);
     }
 
     public function delete(FilterFileDTO $filters): void
@@ -143,7 +170,7 @@ class YCloudS3Service implements S3ServiceContract
             $this->fileRepository->deleteMany($filters);
         } catch (\Throwable $e) {
             logger()->error('[YCloudS3Service.delete] delete failed', [
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'context' => $filters->toArray(),
             ]);
             throw new ServerErrorException();
@@ -164,7 +191,7 @@ class YCloudS3Service implements S3ServiceContract
             }
         } catch (\Throwable $e) {
             logger()->error('[YCloudS3Service.forceDelete] force-delete failed', [
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'context' => $filters->toArray(),
             ]);
             throw new ServerErrorException();
@@ -173,10 +200,10 @@ class YCloudS3Service implements S3ServiceContract
 
     public function fileExists(string $key): bool
     {
-        return $this->disk->exists($key);
+        return $this->resolveConfiguredDisk()->exists($key);
     }
 
-    public function setDisk(Filesystem $newDisk): self
+    public function setDisk(FilesystemAdapter $newDisk): self
     {
         $this->disk = $newDisk;
 
@@ -204,5 +231,33 @@ class YCloudS3Service implements S3ServiceContract
         assert($file->content instanceof UploadedFile);
 
         return 'users/' . $userId . '/' . $file->key . '.' . $file->content->extension();
+    }
+
+    private function getSignedUrlTtlMinutes(): int
+    {
+        return (int) config('filesystems.environments.signed_url_ttl_minutes', 5);
+    }
+
+    private function resolveDisk(EnumsStorage $diskName): FilesystemAdapter
+    {
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk($diskName->value);
+
+        return $disk;
+    }
+
+    private function resolveConfiguredDisk(?EnumsStorage $diskName = null): FilesystemAdapter
+    {
+        $resolvedDiskName = $diskName ?? $this->diskName;
+
+        if ($resolvedDiskName !== $this->diskName) {
+            return $this->resolveDisk($resolvedDiskName);
+        }
+
+        if ($this->disk === null) {
+            $this->disk = $this->resolveDisk($this->diskName);
+        }
+
+        return $this->disk;
     }
 }

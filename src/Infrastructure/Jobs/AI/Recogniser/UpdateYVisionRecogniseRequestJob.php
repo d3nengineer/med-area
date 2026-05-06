@@ -55,11 +55,6 @@ class UpdateYVisionRecogniseRequestJob implements ShouldQueue
         RecogniserServiceContract $recogniserService,
         RecogniseResponseParser $recogniseResponseParser,
     ): void {
-        logger()->debug('[UpdateYVisionRecogniseRequestJob.handle] starting job', [
-            'operation_id' => $this->recogniseRequest->operation_id,
-            'attempt' => $this->attempts(),
-        ]);
-
         $response = $recogniserService->getRecognition($this->recogniseRequest);
 
         if ($response->done) {

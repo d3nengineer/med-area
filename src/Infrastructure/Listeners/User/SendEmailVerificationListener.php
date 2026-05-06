@@ -15,10 +15,6 @@ class SendEmailVerificationListener
         /** @var User $user */
         $user = $event->user;
 
-        logger()->debug('[SendEmailVerificationListener.handle] sending email verification notification', [
-            'user_id' => $user->id,
-        ]);
-
         if (! $user->hasVerifiedEmail()) {
             $user->notify(new EmailVerificationNotification($user));
         }

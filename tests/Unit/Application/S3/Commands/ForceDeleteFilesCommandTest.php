@@ -7,7 +7,7 @@ namespace Tests\Unit\Application\S3\Commands;
 use Application\S3\Commands\ForceDeleteFilesCommand;
 use Application\S3\Services\YCloudS3Service;
 use Domain\File\Models\File;
-use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Domain\File\Repositories\FileRepositoryContract;
@@ -16,7 +16,7 @@ use Tests\TestCase;
 
 class ForceDeleteFilesCommandTest extends TestCase
 {
-    protected Filesystem $disk;
+    protected FilesystemAdapter $disk;
 
     protected int $subDays;
 
@@ -24,7 +24,9 @@ class ForceDeleteFilesCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->disk = Storage::disk(EnumsStorage::S3_TESTING);
+        Storage::fake(EnumsStorage::S3_TESTING->value);
+
+        $this->disk = Storage::disk(EnumsStorage::S3_TESTING->value);
 
         $this->subDays = (int) config('filesystems.environments.force_delete_sub_days');
     }

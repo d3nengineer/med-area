@@ -86,7 +86,7 @@ class JsonLoggingTest extends TestCase
 
     public function test_json_formatter_datetime_is_valid_iso8601(): void
     {
-        $this->channel->debug('timestamp check');
+        $this->channel->info('timestamp check');
 
         $formatted = $this->handler->getRecords()[0]->formatted;
         $decoded = json_decode($formatted, true);

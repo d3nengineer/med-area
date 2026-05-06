@@ -46,8 +46,6 @@ class YVisionOCRService extends BaseExternalService implements RecogniserService
     {
         $recogniseRequestId = $recogniseRequestDTO->toArray()['id'] ?? null;
 
-        logger()->debug('[YVisionOCRService.recogniseAsync] starting', ['recognise_request_id' => $recogniseRequestId]);
-
         $this->setURLResourceParam('recognizeTextAsync');
 
         try {
@@ -72,8 +70,6 @@ class YVisionOCRService extends BaseExternalService implements RecogniserService
                     $this->recogniseRequestService->updateById($recogniseRequestId, $recogniseRequestDTO);
                 }
 
-                logger()->debug('[YVisionOCRService.recogniseAsync] dispatching update job', ['operation_id' => $responseDTO->id]);
-
                 // Queue for periodic recognition status checking via Domain Event
                 event(new RecogniseRequestCompleted($recogniseRequestDTO));
             }
@@ -91,8 +87,6 @@ class YVisionOCRService extends BaseExternalService implements RecogniserService
 
     public function getRecognition(RecogniseRequestDTO $recogniseRequest): RecogniseAsyncResponse
     {
-        logger()->debug('[YVisionOCRService.getRecognition] starting', ['operation_id' => $recogniseRequest->operation_id]);
-
         $this->setURLResourceParam('getRecognition');
 
         try {

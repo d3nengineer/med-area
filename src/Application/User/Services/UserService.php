@@ -26,14 +26,10 @@ class UserService implements UserServiceContract
      */
     public function me(): UserDTO
     {
-        logger()->debug('[UserService.me] starting');
-
         if (! $user = auth()->user()) {
             throw new AccessDeniedHttpException();
         }
         /** @var User $user */
-
-        logger()->debug('[UserService.me] returning user', ['user_id' => $user->getKey()]);
 
         return UserDTO::from($user);
     }
@@ -48,13 +44,9 @@ class UserService implements UserServiceContract
      */
     public function getById(string|int $id): UserDTO
     {
-        logger()->debug('[UserService.getById] starting', ['id' => $id]);
-
         if (! $user = $this->userRepository->getById($id)) {
             throw new NotFoundHttpException();
         }
-
-        logger()->debug('[UserService.getById] returning user', ['user_id' => $user->id]);
 
         return UserDTO::from($user);
     }

@@ -27,8 +27,6 @@ class AnalysSearchIndexService implements AnalysSearchIndexServiceContract
 
     public function ensureIndex(): void
     {
-        logger()->debug('[AnalysSearchIndexService.ensureIndex] ensuring index', ['index' => $this->indexName]);
-
         $client = $this->elasticsearchClientService->getClient();
 
         if ($this->resolveResponse($client->indices()->exists(['index' => $this->indexName]))->asBool()) {
@@ -58,8 +56,6 @@ class AnalysSearchIndexService implements AnalysSearchIndexServiceContract
 
     public function index(UserAnalysDTO $dto): void
     {
-        logger()->debug('[AnalysSearchIndexService.index] indexing document', ['id' => $dto->id]);
-
         $client = $this->elasticsearchClientService->getClient();
 
         $client->index([
@@ -80,8 +76,6 @@ class AnalysSearchIndexService implements AnalysSearchIndexServiceContract
 
     public function delete(string $id): void
     {
-        logger()->debug('[AnalysSearchIndexService.delete] removing document', ['id' => $id]);
-
         $client = $this->elasticsearchClientService->getClient();
 
         $client->delete([

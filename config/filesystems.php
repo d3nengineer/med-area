@@ -97,6 +97,7 @@ return [
     */
     'environments' => [
         'force_delete_sub_days' => env('FILES_FORCE_DELETE_SUB_DAYS'),
+        'signed_url_ttl_minutes' => env('FILES_SIGNED_URL_TTL_MINUTES', 5),
     ],
 
 ];

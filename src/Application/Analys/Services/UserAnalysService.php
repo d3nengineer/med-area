@@ -34,8 +34,6 @@ class UserAnalysService implements UserAnalysServiceContract
      */
     public function createUserAnalysis(CreateUserAnalysisRequestDTO $dto): array
     {
-        logger()->debug('[UserAnalysService.createUserAnalysis] starting', ['analysis_count' => count($dto->analysis)]);
-
         DB::beginTransaction();
 
         try {
@@ -49,8 +47,6 @@ class UserAnalysService implements UserAnalysServiceContract
                 );
 
                 $createdRecords[] = $createdDTO;
-
-                logger()->debug('[UserAnalysService] firing UserAnalysCreated', ['id' => $createdDTO->id]);
                 event(new UserAnalysCreated($createdDTO));
             }
 
@@ -79,8 +75,6 @@ class UserAnalysService implements UserAnalysServiceContract
      */
     public function getUserAnalysis(FilterUserAnalysDTO $filters): Collection
     {
-        logger()->debug('[UserAnalysService.getUserAnalysis] starting', ['filters' => $filters->toArray()]);
-
         try {
             $result = $this->userAnalysRepository->getMany($filters);
         } catch (\Throwable $e) {
@@ -91,8 +85,6 @@ class UserAnalysService implements UserAnalysServiceContract
 
             throw new ServerErrorException();
         }
-
-        logger()->debug('[UserAnalysService.getUserAnalysis] returning records', ['count' => $result->count()]);
 
         return $result;
     }
@@ -116,7 +108,6 @@ class UserAnalysService implements UserAnalysServiceContract
 
             foreach ($records as $record) {
                 $dto = UserAnalysDTO::from($record);
-                logger()->debug('[UserAnalysService] firing UserAnalysDeleted', ['id' => $dto->id]);
                 event(new UserAnalysDeleted($dto));
             }
         } catch (\Throwable $e) {

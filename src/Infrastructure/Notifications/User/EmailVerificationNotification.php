@@ -33,11 +33,6 @@ class EmailVerificationNotification extends Notification implements ShouldQueue
      */
     public function toMail(User $notifiable): MailMessage
     {
-        logger()->debug('[EmailVerificationNotification.toMail] preparing email', [
-            'user_id' => $notifiable->getKey(),
-            'email' => $notifiable->getEmailForVerification(),
-        ]);
-
         return new MailMessage()
             ->subject('Welcome to MedArea!')
             ->line('Thank you for registering, ' . $this->user->nickname . '!')
@@ -53,10 +48,6 @@ class EmailVerificationNotification extends Notification implements ShouldQueue
      */
     public function verificationUrl(User $notifiable): string
     {
-        logger()->debug('[EmailVerificationNotification.verificationUrl] generating verification URL', [
-            'user_id' => $notifiable->getKey(),
-        ]);
-
         return resolve(\Illuminate\Routing\UrlGenerator::class)->temporarySignedRoute(
             'verification.verify',
             now()->addMinutes(config('auth.verification.expire', 60)),

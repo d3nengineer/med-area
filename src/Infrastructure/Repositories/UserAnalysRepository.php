@@ -40,13 +40,9 @@ class UserAnalysRepository extends BaseRepository implements UserAnalysRepositor
 
     public function getMany(FilterUserAnalysDTO $filters): Collection
     {
-        logger()->debug('[UserAnalysRepository.getMany] starting query', ['filters' => $filters->toArray()]);
-
         $query = $this->model::query();
 
         $result = $this->baseFilters($query, $filters)->get();
-
-        logger()->debug('[UserAnalysRepository.getMany] returning records', ['count' => $result->count()]);
 
         return $result;
     }
@@ -81,8 +77,6 @@ class UserAnalysRepository extends BaseRepository implements UserAnalysRepositor
     public function baseFilters(Builder $query, FilterBaseDTO $filters): Builder
     {
         /** @var FilterUserAnalysDTO $filters */
-        logger()->debug('[UserAnalysRepository.baseFilters] applying filters', $filters->toArray());
-
         $query = parent::baseFilters($query, $filters);
 
         // Attribute: user_id
@@ -94,8 +88,6 @@ class UserAnalysRepository extends BaseRepository implements UserAnalysRepositor
         if ($filters->isNotEmptyValue('analys_ids')) {
             $query->whereAnalysId($filters->analys_ids);
         }
-
-        logger()->debug('[UserAnalysRepository.baseFilters] filters applied', ['query' => $query->toRawSql()]);
 
         return $query;
     }

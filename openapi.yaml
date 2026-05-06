@@ -197,18 +197,9 @@ paths:
       tags:
         - file
         - api
-      description: 'Get files by filters.'
+      description: "Get authenticated user's files by filters."
       operationId: apiFilesIndex
       parameters:
-        -
-          name: 'user_ids[]'
-          in: query
-          description: 'Array of user IDs'
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
         -
           name: 'ids[]'
           in: query
@@ -255,18 +246,9 @@ paths:
       tags:
         - file
         - api
-      description: 'Delete files by filters.'
+      description: "Delete authenticated user's files by filters."
       operationId: apiFilesDestroy
       parameters:
-        -
-          name: 'user_ids[]'
-          in: query
-          description: 'Array of user IDs'
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
         -
           name: 'ids[]'
           in: query
@@ -560,9 +542,13 @@ components:
           description: 'user_id of File'
           type: string
           format: uuid
-        path:
-          description: 'path of File'
+        download_url:
+          description: 'Temporary signed download URL'
           type: string
+        download_expires_at:
+          description: 'Signed URL expiration datetime'
+          type: string
+          format: date-time
       type: object
     FileResourceCollection:
       title: FileResourceCollection

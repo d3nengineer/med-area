@@ -18,11 +18,6 @@ class UserAnalysSearchService implements UserAnalysSearchServiceContract
 
     public function search(SearchUserAnalysDTO $dto): Collection
     {
-        logger()->debug('[UserAnalysSearchService.search] search called', [
-            'userId' => $dto->userId,
-            'query'  => $dto->query,
-        ]);
-
         try {
             $results = $this->searchRepository->search($dto);
         } catch (\Throwable $e) {
