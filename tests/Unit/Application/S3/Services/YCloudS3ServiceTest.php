@@ -115,6 +115,30 @@ class YCloudS3ServiceTest extends TestCase
         $this->assertCount($count, $result);
     }
 
+    public function test_get_files_does_not_resolve_s3_disk_when_storage_access_is_not_needed(): void
+    {
+        $originalRegion = config('filesystems.disks.s3.region');
+
+        try {
+            config()->set('filesystems.disks.s3.region', null);
+            Storage::forgetDisk(EnumsStorage::S3->value);
+
+            $user = $this->getUser();
+            File::factory()->for($user)->create();
+
+            $service = new YCloudS3Service(
+                app(FileRepositoryContract::class),
+            );
+
+            $result = $service->getFiles(FilterFileDTO::from([]));
+
+            $this->assertInstanceOf(File::class, $result->first());
+        } finally {
+            config()->set('filesystems.disks.s3.region', $originalRegion);
+            Storage::forgetDisk(EnumsStorage::S3->value);
+        }
+    }
+
     public function test_temporary_url_success(): void
     {
         $disk = Storage::disk(EnumsStorage::S3_TESTING->value);

@@ -24,7 +24,9 @@ class ForceDeleteFilesCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->disk = Storage::disk(EnumsStorage::S3_TESTING);
+        Storage::fake(EnumsStorage::S3_TESTING->value);
+
+        $this->disk = Storage::disk(EnumsStorage::S3_TESTING->value);
 
         $this->subDays = (int) config('filesystems.environments.force_delete_sub_days');
     }

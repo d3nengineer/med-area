@@ -25,7 +25,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class YCloudS3Service implements S3ServiceContract
 {
-    public private(set) FilesystemAdapter $disk;
+    protected ?FilesystemAdapter $disk;
 
     protected readonly FileRepositoryContract $fileRepository;
 
@@ -38,7 +38,7 @@ class YCloudS3Service implements S3ServiceContract
     ) {
         $this->fileRepository = $fileRepository;
         $this->diskName = $diskName ?? EnumsStorage::S3;
-        $this->disk = $disk ?? $this->resolveDisk($this->diskName);
+        $this->disk = $disk;
     }
 
     public function upload(FileDTO $file): File
@@ -51,8 +51,9 @@ class YCloudS3Service implements S3ServiceContract
             assert($file->content instanceof UploadedFile);
 
             $path = $this->getFilePath($file);
+            $disk = $this->resolveConfiguredDisk();
 
-            $result = $this->disk->putFile($path, $file->content);
+            $result = $disk->putFile($path, $file->content);
             if (! $result) {
                 throw new ServerErrorException('Cant upload file to ycloud s3. Path: ' . $path);
             }
@@ -115,7 +116,7 @@ class YCloudS3Service implements S3ServiceContract
      */
     public function getFileFromStorage(string $key, ?EnumsStorage $diskName = null): string
     {
-        $storage = $diskName !== null ? $this->resolveDisk($diskName) : $this->disk;
+        $storage = $this->resolveConfiguredDisk($diskName);
 
         if (! $content = $storage->get($key)) {
             throw new NotFoundHttpException();
@@ -127,7 +128,7 @@ class YCloudS3Service implements S3ServiceContract
     public function temporaryUrl(string $key, \DateTimeInterface $expiresAt, ?EnumsStorage $diskName = null): string
     {
         $resolvedDiskName = $diskName ?? $this->diskName;
-        $disk = $diskName !== null ? $this->resolveDisk($diskName) : $this->disk;
+        $disk = $this->resolveConfiguredDisk($diskName);
 
         try {
             if (! $disk->providesTemporaryUrls()) {
@@ -199,7 +200,7 @@ class YCloudS3Service implements S3ServiceContract
 
     public function fileExists(string $key): bool
     {
-        return $this->disk->exists($key);
+        return $this->resolveConfiguredDisk()->exists($key);
     }
 
     public function setDisk(FilesystemAdapter $newDisk): self
@@ -243,5 +244,20 @@ class YCloudS3Service implements S3ServiceContract
         $disk = Storage::disk($diskName->value);
 
         return $disk;
+    }
+
+    private function resolveConfiguredDisk(?EnumsStorage $diskName = null): FilesystemAdapter
+    {
+        $resolvedDiskName = $diskName ?? $this->diskName;
+
+        if ($resolvedDiskName !== $this->diskName) {
+            return $this->resolveDisk($resolvedDiskName);
+        }
+
+        if ($this->disk === null) {
+            $this->disk = $this->resolveDisk($this->diskName);
+        }
+
+        return $this->disk;
     }
 }
