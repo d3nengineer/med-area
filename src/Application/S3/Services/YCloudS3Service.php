@@ -9,6 +9,8 @@ use Application\S3\Services\Contracts\S3ServiceContract;
 use Domain\File\DTO\FileDTO;
 use Domain\File\DTO\Filters\FilterFileDTO;
 use Domain\File\Events\FileMarkedForDeletion;
+use Domain\File\Events\FileSoftDeleted;
+use Domain\File\Events\FileUploaded;
 use Domain\File\Models\File;
 use Domain\File\Repositories\FileRepositoryContract;
 use Illuminate\Database\Eloquent\Collection;
@@ -25,6 +27,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class YCloudS3Service implements S3ServiceContract
 {
+    private const DELETE_BATCH_SIZE = 50;
+
     protected ?FilesystemAdapter $disk;
 
     protected readonly FileRepositoryContract $fileRepository;
@@ -73,7 +77,10 @@ class YCloudS3Service implements S3ServiceContract
     public function createFile(FileDTO $file): File
     {
         try {
-            return $this->fileRepository->create($file);
+            $savedFile = $this->fileRepository->create($file);
+            event(new FileUploaded(FileDTO::from($savedFile)));
+
+            return $savedFile;
         } catch (\Throwable $e) {
             logger()->critical('[YCloudS3Service.createFile] failed to save file to DB', [
                 'error' => $e->getMessage(),
@@ -167,7 +174,23 @@ class YCloudS3Service implements S3ServiceContract
         logger()->info('[YCloudS3Service.delete] deleting files', ['filters' => $filters->toArray()]);
 
         try {
-            $this->fileRepository->deleteMany($filters);
+            $filesForDeleting = $this->fileRepository->getDeletionBatch($filters, self::DELETE_BATCH_SIZE);
+
+            while ($filesForDeleting->isNotEmpty()) {
+                $deletedCount = $this->fileRepository->deleteMany(
+                    $this->makeDeleteBatchFilters($filters, $filesForDeleting->modelKeys())
+                );
+
+                if ($deletedCount <= 0) {
+                    throw new RuntimeException('Batch delete made no progress.');
+                }
+
+                foreach ($filesForDeleting as $file) {
+                    event(new FileSoftDeleted(FileDTO::from($file)));
+                }
+
+                $filesForDeleting = $this->fileRepository->getDeletionBatch($filters, self::DELETE_BATCH_SIZE);
+            }
         } catch (\Throwable $e) {
             logger()->error('[YCloudS3Service.delete] delete failed', [
                 'error' => $e->getMessage(),
@@ -175,6 +198,17 @@ class YCloudS3Service implements S3ServiceContract
             ]);
             throw new ServerErrorException();
         }
+    }
+
+    /**
+     * @param array<int, mixed> $ids
+     */
+    private function makeDeleteBatchFilters(FilterFileDTO $filters, array $ids): FilterFileDTO
+    {
+        return FilterFileDTO::from([
+            ...$filters->toArray(),
+            'ids' => array_values(array_map('strval', $ids)),
+        ]);
     }
 
     public function forceDelete(FilterFileDTO $filters): void

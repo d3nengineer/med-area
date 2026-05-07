@@ -7,12 +7,17 @@ namespace Tests\Unit\Application\S3\Services;
 use Carbon\Carbon;
 use Domain\File\DTO\FileDTO;
 use Domain\File\DTO\Filters\FilterFileDTO;
+use Domain\File\Events\FileSoftDeleted;
+use Domain\File\Events\FileUploaded;
 use Application\S3\Services\YCloudS3Service;
 use Domain\File\Factories\FileFactory;
 use Domain\File\Models\File;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Storage;
 use Domain\File\Repositories\FileRepositoryContract;
+use Mockery\MockInterface;
 use Shared\Enums\Storage as EnumsStorage;
 use Shared\Exceptions\ServerErrorException;
 use Tests\TestCase;
@@ -60,6 +65,25 @@ class YCloudS3ServiceTest extends TestCase
 
         // Assert that database has File data
         $this->assertDatabaseHas(File::class, $dto->except('content')->toArray());
+    }
+
+    public function test_upload_dispatches_file_uploaded_event_with_saved_file_snapshot(): void
+    {
+        Event::fake();
+
+        $user = $this->authUser();
+        $dto = $this->getFileDTO();
+        $dto->user_id = $user->id;
+
+        $result = $this->service->upload($dto);
+
+        Event::assertDispatchedTimes(FileUploaded::class, 1);
+        Event::assertDispatched(FileUploaded::class, function (FileUploaded $event) use ($result, $user): bool {
+            return $event->fileDTO->id === $result->id
+                && $event->fileDTO->user_id === $user->id
+                && $event->fileDTO->storage === EnumsStorage::S3_TESTING
+                && $event->fileDTO->key === $result->key;
+        });
     }
 
     public function test_upload_unauth_and_user_id_is_empty(): void
@@ -270,6 +294,110 @@ class YCloudS3ServiceTest extends TestCase
         $this->assertSoftDeleted(File::class, ['user_id' => $user->id]);
     }
 
+    public function test_delete_dispatches_file_soft_deleted_event_for_each_deleted_file(): void
+    {
+        Event::fake();
+
+        $user = $this->getUser();
+        $deletedFiles = File::factory(2)->for($user)->create();
+        File::factory()->for($user)->create();
+
+        $filters = FilterFileDTO::from([
+            'ids' => $deletedFiles->pluck('id')->all(),
+            'user_ids' => [$user->id],
+        ]);
+
+        $this->service->delete($filters);
+
+        Event::assertDispatchedTimes(FileSoftDeleted::class, 2);
+
+        foreach ($deletedFiles as $file) {
+            Event::assertDispatched(FileSoftDeleted::class, function (FileSoftDeleted $event) use ($file): bool {
+                return $event->fileDTO->id === $file->id
+                    && $event->fileDTO->user_id === $file->user_id
+                    && $event->fileDTO->storage === $file->storage;
+            });
+        }
+    }
+
+    public function test_delete_processes_files_in_batches_before_dispatching_soft_delete_events(): void
+    {
+        Event::fake();
+
+        $user = $this->getUser();
+        $filters = FilterFileDTO::from(['user_ids' => [$user->id]]);
+
+        $firstBatch = new Collection([
+            $this->makeDeletionBatchFile('file-1', $user->id),
+            $this->makeDeletionBatchFile('file-2', $user->id),
+        ]);
+        $secondBatch = new Collection([
+            $this->makeDeletionBatchFile('file-3', $user->id),
+        ]);
+        $emptyBatch = new Collection();
+
+        /** @var FileRepositoryContract|MockInterface $repositoryMock */
+        $repositoryMock = $this->mock(FileRepositoryContract::class);
+        $repositoryMock->shouldReceive('getDeletionBatch')
+            ->times(3)
+            ->with($filters, 500)
+            ->andReturn($firstBatch, $secondBatch, $emptyBatch);
+        $repositoryMock->shouldReceive('deleteMany')
+            ->once()
+            ->with(Mockery::on(function (FilterFileDTO $batchFilters) use ($filters): bool {
+                return $batchFilters->user_ids === $filters->user_ids
+                    && $batchFilters->ids === ['file-1', 'file-2'];
+            }))
+            ->andReturn(2);
+        $repositoryMock->shouldReceive('deleteMany')
+            ->once()
+            ->with(Mockery::on(function (FilterFileDTO $batchFilters) use ($filters): bool {
+                return $batchFilters->user_ids === $filters->user_ids
+                    && $batchFilters->ids === ['file-3'];
+            }))
+            ->andReturn(1);
+
+        $service = new YCloudS3Service($repositoryMock);
+
+        $service->delete($filters);
+
+        Event::assertDispatchedTimes(FileSoftDeleted::class, 3);
+    }
+
+    public function test_delete_throws_when_batch_delete_makes_no_progress(): void
+    {
+        Event::fake();
+
+        $user = $this->getUser();
+        $filters = FilterFileDTO::from(['user_ids' => [$user->id]]);
+        $batch = new Collection([
+            $this->makeDeletionBatchFile('file-1', $user->id),
+        ]);
+
+        /** @var FileRepositoryContract|MockInterface $repositoryMock */
+        $repositoryMock = $this->mock(FileRepositoryContract::class);
+        $repositoryMock->shouldReceive('getDeletionBatch')
+            ->once()
+            ->with($filters, 500)
+            ->andReturn($batch);
+        $repositoryMock->shouldReceive('deleteMany')
+            ->once()
+            ->with(Mockery::on(function (FilterFileDTO $batchFilters) use ($filters): bool {
+                return $batchFilters->user_ids === $filters->user_ids
+                    && $batchFilters->ids === ['file-1'];
+            }))
+            ->andReturn(0);
+
+        $service = new YCloudS3Service($repositoryMock);
+
+        try {
+            $service->delete($filters);
+            $this->fail('Expected delete() to throw a server error when batch deletion makes no progress.');
+        } catch (ServerErrorException) {
+            Event::assertNotDispatched(FileSoftDeleted::class);
+        }
+    }
+
     public function test_delete_files_success_use_filter_by_size(): void
     {
         // User for testing
@@ -430,5 +558,18 @@ class YCloudS3ServiceTest extends TestCase
         $dto->content = UploadedFile::fake()->image('testing.jpg');
 
         return $dto;
+    }
+
+    private function makeDeletionBatchFile(string $id, string $userId): File
+    {
+        $file = new File();
+        $file->forceFill([
+            'id' => $id,
+            'user_id' => $userId,
+            'storage' => EnumsStorage::S3_TESTING,
+            'key' => 'users/' . $userId . '/' . $id . '.pdf',
+        ]);
+
+        return $file;
     }
 }
