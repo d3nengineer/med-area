@@ -20,7 +20,9 @@ use Infrastructure\Repositories\UserRepository;
 use Infrastructure\Services\AnalysSearchIndexService;
 use Infrastructure\Services\Contracts\AnalysSearchIndexServiceContract;
 use Infrastructure\Services\Contracts\ElasticsearchClientServiceContract;
+use Infrastructure\Services\Contracts\UserActivityAuditIndexServiceContract;
 use Infrastructure\Services\ElasticsearchClientService;
+use Infrastructure\Services\UserActivityAuditIndexService;
 
 class InfrastructureServiceProvider extends ServiceProvider
 {
@@ -45,6 +47,7 @@ class InfrastructureServiceProvider extends ServiceProvider
         UserAnalysRepositoryContract::class => UserAnalysRepository::class,
         UserAnalysSearchRepositoryContract::class => UserAnalysSearchRepository::class,
         AnalysSearchIndexServiceContract::class => AnalysSearchIndexService::class,
+        UserActivityAuditIndexServiceContract::class => UserActivityAuditIndexService::class,
     ];
 
     public function register(): void

@@ -10,6 +10,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 
 class IndexUserAnalysListener implements ShouldQueue
 {
+    public bool $afterCommit = true;
+
     public function __construct(
         private readonly AnalysSearchIndexServiceContract $indexService,
     ) {}

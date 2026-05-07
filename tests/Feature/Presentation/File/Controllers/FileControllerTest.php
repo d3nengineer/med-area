@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Presentation\File\Controllers;
 
 use Domain\File\DTO\Filters\FilterFileDTO;
+use Domain\File\Events\FileSoftDeleted;
+use Domain\File\Events\FileUploaded;
 use Domain\File\Factories\FileFactory;
 use Domain\File\Models\File as FileModel;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Shared\Enums\Storage as EnumsStorage;
 use Tests\TestCase;
@@ -73,6 +76,32 @@ class FileControllerTest extends TestCase
         $this->assertCount(2, $payload);
         $this->assertStringStartsWith('https://signed.test/users/' . $user->id . '/', $payload[0]['download_url']);
         $this->assertNotEmpty($payload[0]['download_expires_at']);
+    }
+
+    public function test_upload_dispatches_auditable_event_per_uploaded_file_without_changing_response_shape(): void
+    {
+        Event::fake();
+
+        $user = $this->authUser();
+
+        $response = $this->post(route('api.files.upload'), [
+            'user_id' => $user->id,
+            'files' => $this->files,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonStructure([
+            'data' => [
+                '*' => [
+                    'id',
+                    'user_id',
+                    'download_url',
+                    'download_expires_at',
+                ],
+            ],
+        ]);
+
+        Event::assertDispatchedTimes(FileUploaded::class, count($this->files));
     }
 
     public function test_upload_validation_big_size(): void
@@ -237,6 +266,21 @@ class FileControllerTest extends TestCase
         foreach ($files as $file) {
             $this->assertSoftDeleted($file);
         }
+    }
+
+    public function test_destroy_dispatches_auditable_event_per_soft_deleted_file_without_changing_status_code(): void
+    {
+        Event::fake();
+
+        $user = $this->authUser();
+        $deletedFiles = FileModel::factory(2)->for($user)->create();
+
+        $response = $this->delete(route('api.files.destroy'), [
+            'ids' => $deletedFiles->pluck('id')->all(),
+        ]);
+
+        $response->assertNoContent();
+        Event::assertDispatchedTimes(FileSoftDeleted::class, $deletedFiles->count());
     }
 
     public function test_destroy_success_filter_by_ids(): void

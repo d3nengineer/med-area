@@ -24,12 +24,21 @@ interface FileRepositoryContract extends BaseRepositoryContract
     public function getMany(FilterFileDTO $filters): Collection;
 
     /**
+     * Get a lightweight batch of files that are about to be soft-deleted.
+     *
+     * @param FilterFileDTO $filters
+     * @param int $limit
+     * @return Collection<array-key, File>
+     */
+    public function getDeletionBatch(FilterFileDTO $filters, int $limit): Collection;
+
+    /**
      * Soft delete from DB
      *
      * @param FilterFileDTO $filters
-     * @return void
+     * @return int
      */
-    public function deleteMany(FilterFileDTO $filters): void;
+    public function deleteMany(FilterFileDTO $filters): int;
 
     /**
      * Force delete from DB

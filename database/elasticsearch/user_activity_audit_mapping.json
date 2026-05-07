@@ -1,0 +1,33 @@
+{
+  "mappings": {
+    "properties": {
+      "event_id": {
+        "type": "keyword"
+      },
+      "action": {
+        "type": "keyword"
+      },
+      "entity_type": {
+        "type": "keyword"
+      },
+      "entity_id": {
+        "type": "keyword"
+      },
+      "actor_user_id": {
+        "type": "keyword"
+      },
+      "subject_user_id": {
+        "type": "keyword"
+      },
+      "occurred_at": {
+        "type": "date"
+      },
+      "source": {
+        "type": "keyword"
+      },
+      "metadata": {
+        "type": "object"
+      }
+    }
+  }
+}

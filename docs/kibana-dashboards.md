@@ -17,10 +17,16 @@ docker/kibana/dashboards/
 │   ├── viz-top-errors.ndjson  # Table — top ERROR/CRITICAL messages
 │   └── dashboard.ndjson       # Dashboard: "Logs Overview"
 │
-└── ocr-monitoring/             # OCR pipeline — incoming job timeline
-    ├── index-pattern.ndjson   # Index pattern: medarea-logs-* (same as above)
-    ├── viz-ocr-timeline.ndjson # Bar chart — OCR requests over time
-    └── dashboard.ndjson       # Dashboard: "OCR Monitoring"
+├── ocr-monitoring/             # OCR pipeline — incoming job timeline
+│   ├── index-pattern.ndjson   # Index pattern: medarea-logs-* (same as above)
+│   ├── viz-ocr-timeline.ndjson # Bar chart — OCR requests over time
+│   └── dashboard.ndjson       # Dashboard: "OCR Monitoring"
+│
+└── user-activity-audit/        # Audit stream — timeline and action breakdown
+    ├── index-pattern.ndjson   # Index pattern: *_user_activity_audit
+    ├── viz-audit-timeline.ndjson # Bar chart — audit events over time
+    ├── viz-action-breakdown.ndjson # Pie chart — action distribution
+    └── dashboard.ndjson       # Dashboard: "User Activity Audit"
 ```
 
 ## Import order
@@ -40,6 +46,17 @@ Kibana requires objects to be imported in dependency order.
 2. Export objects from Kibana: **Stack Management → Saved Objects → Export**
 3. Split the exported NDJSON into separate files following the naming convention above
 4. No changes to `setup.sh` are needed — it auto-discovers subdirectories
+
+## Audit Dashboard Notes
+
+The `user-activity-audit/` dashboard is designed for the audit stream written to
+`{index_prefix}_user_activity_audit`. It focuses on:
+
+- activity volume over time
+- action mix (`uploaded`, `soft_deleted`, `created`, `deleted`)
+
+The dashboard intentionally avoids sensitive payload visualization because the audit
+documents only index safe metadata.
 
 ## Shared objects
 

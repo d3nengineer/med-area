@@ -9,8 +9,11 @@ use Application\Analys\DTO\Requests\CreateUserAnalysisRequestDTO;
 use Domain\Analys\DTO\UserAnalysDTO;
 use Application\Analys\Services\UserAnalysService;
 use Domain\Analys\Enums\Analys;
+use Domain\Analys\Events\UserAnalysCreated;
+use Domain\Analys\Events\UserAnalysDeleted;
 use Domain\Analys\Factories\UserAnalysFactory;
 use Domain\Analys\Models\UserAnalys;
+use Illuminate\Support\Facades\Event;
 use Shared\Exceptions\ServerErrorException;
 use Tests\TestCase;
 
@@ -52,6 +55,31 @@ class UserAnalysServiceTest extends TestCase
         $this->assertInstanceOf(UserAnalysDTO::class, $result[0]);
         $this->assertCount(count($dto->analysis), $result);
 
+    }
+
+    public function test_create_user_analysis_dispatches_event_per_saved_analysis(): void
+    {
+        Event::fake();
+
+        $user = $this->getUser();
+        $factory = new UserAnalysFactory();
+        $dto = CreateUserAnalysisRequestDTO::from([
+            'analysis' => [
+                UserAnalysDTO::from(array_merge($factory->definition(), ['user_id' => $user->id])),
+                UserAnalysDTO::from(array_merge($factory->definition(), ['user_id' => $user->id])),
+            ],
+        ]);
+
+        $result = $this->service->createUserAnalysis($dto);
+
+        Event::assertDispatchedTimes(UserAnalysCreated::class, count($result));
+
+        foreach ($result as $savedAnalysis) {
+            Event::assertDispatched(UserAnalysCreated::class, function (UserAnalysCreated $event) use ($savedAnalysis): bool {
+                return $event->userAnalysDTO->id === $savedAnalysis->id
+                    && $event->userAnalysDTO->user_id === $savedAnalysis->user_id;
+            });
+        }
     }
 
     public function test_create_user_analysis_missing_values(): void
@@ -168,6 +196,34 @@ class UserAnalysServiceTest extends TestCase
 
         // Check assert is model deleted
         $this->assertModelMissing($userAnalysModel);
+    }
+
+    public function test_delete_user_analysis_dispatches_event_per_deleted_analysis(): void
+    {
+        Event::fake();
+
+        $user = $this->authUser();
+        $factory = new UserAnalysFactory();
+
+        $deletedAnalyses = collect([
+            UserAnalys::query()->create(array_merge($factory->definition(), ['user_id' => $user->id])),
+            UserAnalys::query()->create(array_merge($factory->definition(), ['user_id' => $user->id])),
+        ]);
+
+        $filters = FilterUserAnalysDTO::from([
+            'user_ids' => [$user->id],
+        ]);
+
+        $this->service->deleteUserAnalysis($filters);
+
+        Event::assertDispatchedTimes(UserAnalysDeleted::class, $deletedAnalyses->count());
+
+        foreach ($deletedAnalyses as $analys) {
+            Event::assertDispatched(UserAnalysDeleted::class, function (UserAnalysDeleted $event) use ($analys): bool {
+                return $event->userAnalysDTO->id === $analys->id
+                    && $event->userAnalysDTO->user_id === $analys->user_id;
+            });
+        }
     }
 
     public function test_delete_user_analysis_filter_analys_ids(): void

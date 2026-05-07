@@ -40,19 +40,37 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
     }
 
     /**
+     * Get a lightweight batch of files scheduled for soft deletion.
+     *
+     * @param FilterFileDTO $filters
+     * @param int $limit
+     * @return Collection<array-key, File>
+     */
+    public function getDeletionBatch(FilterFileDTO $filters, int $limit): Collection
+    {
+        $query = $this->baseFilters($this->model::query(), $filters);
+
+        return $query
+            ->select(['id', 'user_id', 'storage', 'key'])
+            ->orderBy('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
      * Soft delete from DB
      *
      * @param FilterFileDTO $filters
-     * @return void
+     * @return int
      */
-    public function deleteMany(FilterFileDTO $filters): void
+    public function deleteMany(FilterFileDTO $filters): int
     {
         logger()->info('[FileRepository.deleteMany] deleting files', ['filters' => $filters->toArray()]);
 
         $query = $this->model::query();
 
         try {
-            $this->baseFilters($query, $filters)->delete();
+            return $this->baseFilters($query, $filters)->delete();
         } catch (\Throwable $e) {
             logger()->error('[FileRepository.deleteMany] DB operation failed', [
                 'error'   => $e->getMessage(),
