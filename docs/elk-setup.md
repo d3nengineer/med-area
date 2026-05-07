@@ -65,6 +65,21 @@ See [Kibana Dashboards](kibana-dashboards.md) for the full directory structure.
 
 ---
 
+## Bootstrapping Application Indexes
+
+Create or refresh the application-managed Elasticsearch indexes:
+
+```bash
+docker compose exec php php artisan app:ensure-elasticsearch-indexes
+```
+
+This command is safe to re-run and ensures both indexes exist:
+
+- `medarea_user_analys`
+- `medarea_user_activity_audit`
+
+---
+
 ## Verifying Logs Reach Elasticsearch
 
 **Step 1** — generate a log entry:
@@ -86,6 +101,37 @@ curl "http://localhost:9200/medarea-logs-*/_search?q=message:elk+test&pretty"
 ```
 
 Expect a hit with `_source.message = "elk test"`.
+
+---
+
+## Verifying Audit Documents Reach Elasticsearch
+
+1. Run a user-facing action that should be audited, such as uploading a file or deleting an analysis.
+2. Ensure the application-managed indexes exist:
+
+```bash
+docker compose exec php php artisan app:ensure-elasticsearch-indexes
+```
+
+3. Query the audit index directly:
+
+```bash
+curl "http://localhost:9200/medarea_user_activity_audit/_search?pretty"
+```
+
+For a narrower check, search by action or entity type:
+
+```bash
+curl "http://localhost:9200/medarea_user_activity_audit/_search?q=action:uploaded&pretty"
+curl "http://localhost:9200/medarea_user_activity_audit/_search?q=entity_type:file&pretty"
+```
+
+Audit documents intentionally store only minimal metadata:
+
+- file events: `storage`
+- analysis events: `analys_id`
+
+Sensitive fields such as file keys, filenames, signed URLs, OCR payloads, and raw analysis values are not indexed.
 
 ---
 
