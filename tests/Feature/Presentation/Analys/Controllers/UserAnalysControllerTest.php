@@ -8,8 +8,11 @@ use Domain\Analys\DTO\Filters\FilterUserAnalysDTO;
 use Application\Analys\DTO\Requests\CreateUserAnalysisRequestDTO;
 use Domain\Analys\DTO\UserAnalysDTO;
 use Domain\Analys\Enums\Analys;
+use Domain\Analys\Events\UserAnalysCreated;
+use Domain\Analys\Events\UserAnalysDeleted;
 use Domain\Analys\Factories\UserAnalysFactory;
 use Domain\Analys\Models\UserAnalys;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class UserAnalysControllerTest extends TestCase
@@ -43,6 +46,25 @@ class UserAnalysControllerTest extends TestCase
         foreach ($dto->analysis as $analys) {
             $this->assertDatabaseHas(UserAnalys::class, $analys->toArray());
         }
+    }
+
+    public function test_user_analysis_create_dispatches_auditable_event_per_saved_analysis_without_changing_response_code(): void
+    {
+        Event::fake();
+
+        $user = $this->authUser();
+        $factory = new UserAnalysFactory();
+        $dto = CreateUserAnalysisRequestDTO::from([
+            'analysis' => [
+                UserAnalysDTO::from(array_merge($factory->definition(), ['user_id' => $user->id])),
+                UserAnalysDTO::from(array_merge($factory->definition(), ['user_id' => $user->id])),
+            ],
+        ]);
+
+        $response = $this->post(route('api.users.analysis.create', ['userId' => $user->id]), $dto->toArray());
+
+        $response->assertCreated();
+        Event::assertDispatchedTimes(UserAnalysCreated::class, count($dto->analysis));
     }
 
     public function test_user_analysis_create_success_with_collection_payload(): void
@@ -358,6 +380,31 @@ class UserAnalysControllerTest extends TestCase
                 'analys_id' => $analys->analys_id,
             ]);
         }
+    }
+
+    public function test_user_analysis_destroy_dispatches_auditable_event_per_deleted_analysis_without_changing_status_code(): void
+    {
+        Event::fake();
+
+        $user = $this->authUser();
+        $factory = new UserAnalysFactory();
+        $deletedAnalyses = [];
+
+        for ($i = 0; $i < 2; $i++) {
+            $deletedAnalyses[] = UserAnalys::query()->create(array_merge($factory->definition(), [
+                'user_id' => $user->id,
+                'analys_id' => Analys::D3->value,
+            ]));
+        }
+
+        $response = $this->delete(route('api.users.analysis.destroy', [
+            'userId' => $user->id,
+            'user_ids' => [$user->id],
+            'analys_ids' => [Analys::D3->value],
+        ]));
+
+        $response->assertNoContent();
+        Event::assertDispatchedTimes(UserAnalysDeleted::class, count($deletedAnalyses));
     }
 
     public function test_user_analysis_destroy_forbidden_unreal_user_id(): void
