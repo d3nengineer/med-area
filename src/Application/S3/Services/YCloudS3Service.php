@@ -27,7 +27,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class YCloudS3Service implements S3ServiceContract
 {
-    private const DELETE_BATCH_SIZE = 50;
+    private const DELETE_BATCH_SIZE = 500;
 
     protected ?FilesystemAdapter $disk;
 

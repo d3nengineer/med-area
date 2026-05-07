@@ -132,7 +132,7 @@ class UserActivityAuditListenersTest extends TestCase
     private function makeFileDTO(): FileDTO
     {
         $user = $this->getUser();
-        $definition = (new FileFactory())->definition();
+        $definition = new FileFactory()->definition();
 
         return FileDTO::from(array_merge($definition, [
             'id' => fake()->uuid(),
@@ -145,7 +145,7 @@ class UserActivityAuditListenersTest extends TestCase
     private function makeAnalysDTO(): UserAnalysDTO
     {
         $user = $this->getUser();
-        $definition = (new UserAnalysFactory())->definition();
+        $definition = new UserAnalysFactory()->definition();
 
         return UserAnalysDTO::from(array_merge($definition, [
             'id' => fake()->uuid(),
