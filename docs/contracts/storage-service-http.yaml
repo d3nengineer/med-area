@@ -1,0 +1,363 @@
+openapi: 3.1.0
+info:
+  title: Storage Service Internal HTTP Contract
+  version: 0.1.0
+  description: |
+    Phase 1 internal HTTP contract between MedArea and storage-service.
+    This contract is internal only and does not describe the public MedArea API.
+servers:
+  - url: http://storage-service:8080
+    description: Local docker-compose service name planned for phase 1
+tags:
+  - name: health
+  - name: storage
+components:
+  securitySchemes:
+    internalBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: internal-service-token
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CausationId:
+      name: X-Causation-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 255
+  schemas:
+    StorageLifecycleState:
+      type: string
+      enum:
+        - pending_upload
+        - available
+        - deleting
+        - failed
+    StorageError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - storage_object_missing
+            - storage_object_conflict
+            - storage_operation_not_found
+            - storage_operation_not_ready
+            - storage_auth_failed
+            - storage_unavailable
+            - storage_timeout
+        message:
+          type: string
+        retryable:
+          type: boolean
+    UploadSessionRequest:
+      type: object
+      required:
+        - file_id
+        - user_id
+        - file_name
+        - content_type
+        - size
+      properties:
+        file_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        file_name:
+          type: string
+        content_type:
+          type: string
+        size:
+          type: integer
+          minimum: 1
+    UploadSessionResponse:
+      type: object
+      required:
+        - storage_operation_id
+        - object_key
+        - expires_at
+        - method
+        - url
+        - headers
+      properties:
+        storage_operation_id:
+          type: string
+          format: uuid
+        object_key:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        method:
+          type: string
+          enum: [PUT]
+        url:
+          type: string
+          format: uri
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+    FinalizeUploadRequest:
+      type: object
+      required:
+        - file_id
+        - expected_state
+      properties:
+        file_id:
+          type: string
+          format: uuid
+        expected_state:
+          $ref: '#/components/schemas/StorageLifecycleState'
+    FinalizeUploadResponse:
+      type: object
+      required:
+        - storage_operation_id
+        - state
+        - finalized_at
+      properties:
+        storage_operation_id:
+          type: string
+          format: uuid
+        state:
+          $ref: '#/components/schemas/StorageLifecycleState'
+        finalized_at:
+          type: string
+          format: date-time
+    DownloadUrlRequest:
+      type: object
+      required:
+        - file_id
+        - object_key
+      properties:
+        file_id:
+          type: string
+          format: uuid
+        object_key:
+          type: string
+        ttl_seconds:
+          type: integer
+          minimum: 1
+          maximum: 900
+    DownloadUrlResponse:
+      type: object
+      required:
+        - file_id
+        - download_url
+        - download_expires_at
+      properties:
+        file_id:
+          type: string
+          format: uuid
+        download_url:
+          type: string
+          format: uri
+        download_expires_at:
+          type: string
+          format: date-time
+    BatchDownloadUrlRequest:
+      type: object
+      required:
+        - files
+      properties:
+        files:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - file_id
+              - object_key
+            properties:
+              file_id:
+                type: string
+                format: uuid
+              object_key:
+                type: string
+    BatchDownloadUrlResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DownloadUrlResponse'
+    DeleteObjectResponse:
+      type: object
+      required:
+        - storage_operation_id
+        - state
+        - deleted
+      properties:
+        storage_operation_id:
+          type: string
+          format: uuid
+        state:
+          $ref: '#/components/schemas/StorageLifecycleState'
+        deleted:
+          type: boolean
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      responses:
+        '200':
+          description: Service process is up
+  /ready:
+    get:
+      tags: [health]
+      summary: Readiness probe
+      responses:
+        '200':
+          description: Service can serve requests
+        '503':
+          description: Dependency unavailable
+  /internal/storage/upload-sessions:
+    post:
+      tags: [storage]
+      summary: Create a direct upload session
+      security:
+        - internalBearer: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CausationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadSessionRequest'
+      responses:
+        '201':
+          description: Upload session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSessionResponse'
+        '409':
+          description: Conflicting storage operation
+  /internal/storage/uploads/{storageOperationId}/finalize:
+    post:
+      tags: [storage]
+      summary: Finalize an uploaded object
+      security:
+        - internalBearer: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CausationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: storageOperationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalizeUploadRequest'
+      responses:
+        '200':
+          description: Upload finalized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinalizeUploadResponse'
+        '404':
+          description: Operation not found
+        '409':
+          description: Object missing or not ready
+  /internal/storage/download-urls:
+    post:
+      tags: [storage]
+      summary: Issue a single short-lived download URL
+      security:
+        - internalBearer: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CausationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DownloadUrlRequest'
+      responses:
+        '200':
+          description: URL issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadUrlResponse'
+  /internal/storage/download-urls/batch:
+    post:
+      tags: [storage]
+      summary: Issue short-lived download URLs for a batch of files
+      security:
+        - internalBearer: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CausationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchDownloadUrlRequest'
+      responses:
+        '200':
+          description: Batch URLs issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchDownloadUrlResponse'
+  /internal/storage/objects/{storageOperationId}:
+    delete:
+      tags: [storage]
+      summary: Delete a physical object synchronously
+      security:
+        - internalBearer: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CausationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: storageOperationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Delete processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteObjectResponse'
+        '404':
+          description: Operation not found

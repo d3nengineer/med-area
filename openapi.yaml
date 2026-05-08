@@ -2,6 +2,11 @@ openapi: 3.0.0
 info:
   title: 'MedArea RESTful API'
   version: 1.0.5
+x-internal-contracts:
+  storage_service_http:
+    phase: http-first
+    contract_file: docs/contracts/storage-service-http.yaml
+    architecture_note: docs/architecture/storage-service.md
 paths:
   /api/analysis:
     get:
