@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withCommands([
+        __DIR__ . '/../src/Application/Storage/Commands',
         __DIR__ . '/../src/Application/S3/Commands',
         __DIR__ . '/../src/Infrastructure/Commands',
     ])
