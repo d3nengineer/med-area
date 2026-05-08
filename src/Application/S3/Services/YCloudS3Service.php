@@ -8,6 +8,7 @@ use Application\S3\DTO\Responses\SignedFileResponseDTO;
 use Application\S3\Services\Contracts\S3ServiceContract;
 use Domain\File\DTO\FileDTO;
 use Domain\File\DTO\Filters\FilterFileDTO;
+use Domain\File\Enums\FileLifecycleState;
 use Domain\File\Events\FileMarkedForDeletion;
 use Domain\File\Events\FileSoftDeleted;
 use Domain\File\Events\FileUploaded;
@@ -70,6 +71,14 @@ class YCloudS3Service implements S3ServiceContract
         }
 
         $file->key = $result;
+        $file->lifecycle_state = FileLifecycleState::AVAILABLE;
+        $file->storage_operation_id = null;
+        $file->storage_error_code = null;
+        $file->storage_error_message = null;
+        $file->lifecycle_changed_at = now();
+        $file->storage_reconciled_at = now();
+        $file->upload_completed_at = now();
+        $file->delete_requested_at = null;
 
         return $this->createFile($file);
     }
@@ -159,12 +168,19 @@ class YCloudS3Service implements S3ServiceContract
 
     public function toSignedResponse(File $file): SignedFileResponseDTO
     {
-        $expiresAt = now()->addMinutes($this->getSignedUrlTtlMinutes());
+        $downloadUrl = null;
+        $expiresAt = null;
+
+        if ($file->lifecycle_state === FileLifecycleState::AVAILABLE) {
+            $expiresAt = now()->addMinutes($this->getSignedUrlTtlMinutes());
+            $downloadUrl = $this->temporaryUrl($file->key, $expiresAt, $file->storage);
+        }
 
         return SignedFileResponseDTO::from([
             'id' => $file->id,
             'user_id' => $file->user_id,
-            'download_url' => $this->temporaryUrl($file->key, $expiresAt, $file->storage),
+            'lifecycle_state' => $file->lifecycle_state,
+            'download_url' => $downloadUrl,
             'download_expires_at' => $expiresAt,
         ]);
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Domain\File\Factories;
 
+use Domain\File\Enums\FileLifecycleState;
 use Domain\File\Models\File;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Shared\Enums\Storage;
@@ -29,6 +30,10 @@ class FileFactory extends Factory
             'bucket' => config('filesystems.disks.s3-testing.bucket', 'test-bucket'),
             'key' => microtime() . random_int(1, 99999),
             'size' => fake()->randomDigit(),
+            'lifecycle_state' => FileLifecycleState::AVAILABLE,
+            'lifecycle_changed_at' => now(),
+            'storage_reconciled_at' => now(),
+            'upload_completed_at' => now(),
         ];
     }
 }

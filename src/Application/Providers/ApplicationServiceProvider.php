@@ -15,8 +15,12 @@ use Application\Analys\Services\Contracts\UserAnalysSearchServiceContract;
 use Application\Analys\Services\Contracts\UserAnalysServiceContract;
 use Application\Analys\Services\UserAnalysSearchService;
 use Application\Analys\Services\UserAnalysService;
+use Application\File\Services\Contracts\FileServiceContract;
+use Application\File\Services\FileService;
 use Application\S3\Services\Contracts\S3ServiceContract;
 use Application\S3\Services\YCloudS3Service;
+use Application\Storage\Services\Contracts\FileLifecycleBackfillServiceContract;
+use Application\Storage\Services\FileLifecycleBackfillService;
 use Application\User\Services\AuthService;
 use Application\User\Services\Contracts\AuthServiceContract;
 use Application\User\Services\Contracts\RegistrationServiceContract;
@@ -44,6 +48,8 @@ class ApplicationServiceProvider extends ServiceProvider
 
         // Files
         S3ServiceContract::class => YCloudS3Service::class,
+        FileServiceContract::class => FileService::class,
+        FileLifecycleBackfillServiceContract::class => FileLifecycleBackfillService::class,
 
         // User
         RegistrationServiceContract::class => RegistrationService::class,

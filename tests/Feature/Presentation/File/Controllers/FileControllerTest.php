@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Presentation\File\Controllers;
 
 use Domain\File\DTO\Filters\FilterFileDTO;
+use Domain\File\Enums\FileLifecycleState;
 use Domain\File\Events\FileSoftDeleted;
 use Domain\File\Events\FileUploaded;
 use Domain\File\Factories\FileFactory;
@@ -63,6 +64,7 @@ class FileControllerTest extends TestCase
                 '*' => [
                     'id',
                     'user_id',
+                    'lifecycle_state',
                     'download_url',
                     'download_expires_at',
                 ],
@@ -74,6 +76,7 @@ class FileControllerTest extends TestCase
         $payload = $response->json('data');
 
         $this->assertCount(2, $payload);
+        $this->assertSame(FileLifecycleState::AVAILABLE->value, $payload[0]['lifecycle_state']);
         $this->assertStringStartsWith('https://signed.test/users/' . $user->id . '/', $payload[0]['download_url']);
         $this->assertNotEmpty($payload[0]['download_expires_at']);
     }
@@ -95,6 +98,7 @@ class FileControllerTest extends TestCase
                 '*' => [
                     'id',
                     'user_id',
+                    'lifecycle_state',
                     'download_url',
                     'download_expires_at',
                 ],
@@ -194,7 +198,28 @@ class FileControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount($count, 'data');
         $response->assertJsonMissingPath('data.0.path');
+        $response->assertJsonPath('data.0.lifecycle_state', FileLifecycleState::AVAILABLE->value);
         $this->assertDatabaseHas(FileModel::class, ['user_id' => $user->id]);
+    }
+
+    public function test_index_does_not_expose_download_url_for_non_available_files(): void
+    {
+        $user = $this->authUser();
+
+        $pendingFile = FileModel::factory()->for($user)->create([
+            'lifecycle_state' => FileLifecycleState::PENDING_UPLOAD,
+        ]);
+
+        $response = $this->get(route('api.files.index', [
+            'ids' => [$pendingFile->id],
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $pendingFile->id);
+        $response->assertJsonPath('data.0.lifecycle_state', FileLifecycleState::PENDING_UPLOAD->value);
+        $response->assertJsonPath('data.0.download_url', null);
+        $response->assertJsonPath('data.0.download_expires_at', null);
     }
 
     public function test_index_ignores_client_supplied_user_ids_and_returns_only_authenticated_users_files(): void

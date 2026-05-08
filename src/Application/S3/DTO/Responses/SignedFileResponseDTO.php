@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Application\S3\DTO\Responses;
 
 use Carbon\Carbon;
+use Domain\File\Enums\FileLifecycleState;
 use Shared\DTO\BaseDTO;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
@@ -16,8 +17,10 @@ class SignedFileResponseDTO extends BaseDTO
 
     public string|Optional $user_id;
 
-    public string $download_url;
+    public FileLifecycleState $lifecycle_state;
+
+    public string|Optional|null $download_url;
 
     #[WithCast(DateTimeInterfaceCast::class)]
-    public Carbon $download_expires_at;
+    public Carbon|Optional|null $download_expires_at;
 }

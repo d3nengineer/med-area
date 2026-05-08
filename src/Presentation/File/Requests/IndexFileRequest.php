@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Presentation\File\Requests;
 
 use Domain\File\DTO\Filters\FilterFileDTO;
+use Domain\File\Enums\FileLifecycleState;
+use Illuminate\Validation\Rule;
 use Shared\Requests\BaseRequest;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
@@ -43,6 +45,8 @@ class IndexFileRequest extends BaseRequest
             // id
             'ids' => ['array'],
             'ids.*' => ['string'],
+            'lifecycle_states' => ['array'],
+            'lifecycle_states.*' => [Rule::enum(FileLifecycleState::class)],
         ];
     }
 }

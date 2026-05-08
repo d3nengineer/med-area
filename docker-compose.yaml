@@ -1,3 +1,10 @@
+x-planned-services:
+  storage-service:
+    status: planned
+    contract: docs/contracts/storage-service-http.yaml
+    architecture: docs/architecture/storage-service.md
+    network: medarea-network
+
 services:
   nginx:
     build:
