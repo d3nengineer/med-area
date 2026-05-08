@@ -166,7 +166,7 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
         }
 
         // Attribute: lifecycle_state
-        if ($filters->isNotEmptyValue('lifecycle_states') && ! empty($filters->lifecycle_states)) {
+        if (is_array($filters->lifecycle_states) && $filters->lifecycle_states !== []) {
             $lifecycleStates = array_map(
                 static fn (mixed $state): string => $state instanceof \BackedEnum ? $state->value : (string) $state,
                 $filters->lifecycle_states,
@@ -176,7 +176,7 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
         }
 
         // Attribute: storage_operation_id
-        if ($filters->isNotEmptyValue('storage_operation_ids') && ! empty($filters->storage_operation_ids)) {
+        if (is_array($filters->storage_operation_ids) && $filters->storage_operation_ids !== []) {
             $query->whereIn('storage_operation_id', $filters->storage_operation_ids);
         }
 
