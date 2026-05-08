@@ -2,11 +2,6 @@ openapi: 3.0.0
 info:
   title: 'MedArea RESTful API'
   version: 1.0.5
-x-internal-contracts:
-  storage_service_http:
-    phase: http-first
-    contract_file: docs/contracts/storage-service-http.yaml
-    architecture_note: docs/architecture/storage-service.md
 paths:
   /api/analysis:
     get:
@@ -202,7 +197,7 @@ paths:
       tags:
         - file
         - api
-      description: "Get authenticated user's files by filters."
+      description: 'Get authenticated user files by filters.'
       operationId: apiFilesIndex
       parameters:
         -
@@ -251,7 +246,7 @@ paths:
       tags:
         - file
         - api
-      description: "Delete authenticated user's files by filters."
+      description: 'Delete authenticated user files by filters.'
       operationId: apiFilesDestroy
       parameters:
         -
@@ -547,13 +542,23 @@ components:
           description: 'user_id of File'
           type: string
           format: uuid
-        download_url:
-          description: 'Temporary signed download URL'
+        lifecycle_state:
+          description: 'Current file lifecycle state'
           type: string
+          enum:
+            - pending_upload
+            - available
+            - deleting
+            - failed
+        download_url:
+          description: 'Temporary signed download URL for available files'
+          type: string
+          nullable: true
         download_expires_at:
-          description: 'Signed URL expiration datetime'
+          description: 'Signed URL expiration datetime for available files'
           type: string
           format: date-time
+          nullable: true
       type: object
     FileResourceCollection:
       title: FileResourceCollection
