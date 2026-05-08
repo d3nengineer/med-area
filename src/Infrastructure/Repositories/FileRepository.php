@@ -168,7 +168,7 @@ class FileRepository extends BaseRepository implements FileRepositoryContract
         // Attribute: lifecycle_state
         if (is_array($filters->lifecycle_states) && $filters->lifecycle_states !== []) {
             $lifecycleStates = array_map(
-                static fn (mixed $state): string => $state instanceof \BackedEnum ? $state->value : (string) $state,
+                static fn(mixed $state): string => $state instanceof \BackedEnum ? $state->value : (string) $state,
                 $filters->lifecycle_states,
             );
 
