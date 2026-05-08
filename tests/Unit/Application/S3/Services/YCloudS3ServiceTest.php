@@ -7,6 +7,7 @@ namespace Tests\Unit\Application\S3\Services;
 use Carbon\Carbon;
 use Domain\File\DTO\FileDTO;
 use Domain\File\DTO\Filters\FilterFileDTO;
+use Domain\File\Enums\FileLifecycleState;
 use Domain\File\Events\FileSoftDeleted;
 use Domain\File\Events\FileUploaded;
 use Application\S3\Services\YCloudS3Service;
@@ -64,7 +65,20 @@ class YCloudS3ServiceTest extends TestCase
         $this->assertTrue($this->service->fileExists($result->key));
 
         // Assert that database has File data
-        $this->assertDatabaseHas(File::class, $dto->except('content')->toArray());
+        $this->assertDatabaseHas(File::class, [
+            'id' => $result->id,
+            'user_id' => $dto->user_id,
+            'storage' => $dto->storage->value,
+            'endpoint' => $dto->endpoint,
+            'bucket' => $dto->bucket,
+            'key' => $result->key,
+            'size' => $dto->size,
+            'lifecycle_state' => FileLifecycleState::AVAILABLE->value,
+            'storage_operation_id' => null,
+            'storage_error_code' => null,
+            'storage_error_message' => null,
+            'delete_requested_at' => null,
+        ]);
     }
 
     public function test_upload_dispatches_file_uploaded_event_with_saved_file_snapshot(): void
@@ -217,6 +231,7 @@ class YCloudS3ServiceTest extends TestCase
 
         $this->assertSame($file->id, $response->id);
         $this->assertSame($file->user_id, $response->user_id);
+        $this->assertSame(FileLifecycleState::AVAILABLE, $response->lifecycle_state);
         $this->assertSame(
             'https://signed.test/users/' . $user->id . '/report.pdf?expires=' . now()->addMinutes(9)->getTimestamp(),
             $response->download_url,
@@ -224,6 +239,21 @@ class YCloudS3ServiceTest extends TestCase
         $this->assertTrue($response->download_expires_at->equalTo(now()->addMinutes(9)));
 
         Carbon::setTestNow();
+    }
+
+    public function test_to_signed_response_omits_download_url_for_non_available_files(): void
+    {
+        $user = $this->getUser();
+        $file = File::factory()->for($user)->create([
+            'lifecycle_state' => FileLifecycleState::PENDING_UPLOAD,
+            'storage' => EnumsStorage::S3_TESTING,
+        ]);
+
+        $response = $this->service->toSignedResponse($file);
+
+        $this->assertSame(FileLifecycleState::PENDING_UPLOAD, $response->lifecycle_state);
+        $this->assertNull($response->download_url);
+        $this->assertNull($response->download_expires_at);
     }
 
     public function test_get_files_success_use_filter_by_size(): void

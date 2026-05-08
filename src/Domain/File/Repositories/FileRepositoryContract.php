@@ -33,12 +33,23 @@ interface FileRepositoryContract extends BaseRepositoryContract
     public function getDeletionBatch(FilterFileDTO $filters, int $limit): Collection;
 
     /**
+     * Get a batch of files, including soft-deleted rows, for lifecycle backfill.
+     *
+     * @param int $limit
+     * @param int $offset
+     * @return Collection<array-key, File>
+     */
+    public function getBackfillBatch(int $limit, int $offset): Collection;
+
+    /**
      * Soft delete from DB
      *
      * @param FilterFileDTO $filters
      * @return int
      */
     public function deleteMany(FilterFileDTO $filters): int;
+
+    public function updateById(string $id, FileDTO $data): FileDTO;
 
     /**
      * Force delete from DB

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Domain\File\Models;
 
+use Domain\File\Enums\FileLifecycleState;
 use Domain\User\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,14 @@ use Shared\Enums\Storage;
  * @property string $bucket
  * @property string $key
  * @property integer $size
+ * @property FileLifecycleState $lifecycle_state
+ * @property string|null $storage_operation_id
+ * @property string|null $storage_error_code
+ * @property string|null $storage_error_message
+ * @property \Illuminate\Support\Carbon|null $lifecycle_changed_at
+ * @property \Illuminate\Support\Carbon|null $storage_reconciled_at
+ * @property \Illuminate\Support\Carbon|null $upload_completed_at
+ * @property \Illuminate\Support\Carbon|null $delete_requested_at
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property \Illuminate\Support\Carbon|null $deleted_at
@@ -59,6 +68,14 @@ class File extends Model
         'bucket',
         'key',
         'size',
+        'lifecycle_state',
+        'storage_operation_id',
+        'storage_error_code',
+        'storage_error_message',
+        'lifecycle_changed_at',
+        'storage_reconciled_at',
+        'upload_completed_at',
+        'delete_requested_at',
     ];
 
     /**
@@ -71,6 +88,11 @@ class File extends Model
         return [
             'storage' => Storage::class,
             'size' => 'int',
+            'lifecycle_state' => FileLifecycleState::class,
+            'lifecycle_changed_at' => 'datetime',
+            'storage_reconciled_at' => 'datetime',
+            'upload_completed_at' => 'datetime',
+            'delete_requested_at' => 'datetime',
         ];
     }
 
